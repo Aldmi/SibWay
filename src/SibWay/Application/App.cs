@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Serilog;
 using SibWay.Application.EventHandlers;
 using SibWay.Infrastructure;
-using SibWay.Services;
 using SibWay.SibWayApi;
 
 
@@ -18,14 +18,15 @@ namespace SibWay.Application
     {
         private readonly IReadOnlyList<SibWayProxy> _sibWays;
         private readonly EventBus _eventBus;
+        private readonly ILogger _logger;
 
 
-        public App(IReadOnlyList<SibWayProxy> sibWays, EventBus eventBus)
+        public App(IReadOnlyList<SibWayProxy> sibWays, EventBus eventBus, ILogger logger)
         {
             _sibWays = sibWays ?? throw new ArgumentNullException(nameof(sibWays));
             _eventBus = eventBus;
+            _logger = logger;
             eventBus.Subscrube<GetDataEventItem>(GetData);
-
         }
 
         
@@ -56,9 +57,5 @@ namespace SibWay.Application
                 sibWay.Dispose();
             }
         }
-
-        
-        
-
     }
 }

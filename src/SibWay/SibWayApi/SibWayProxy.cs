@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using CSharpFunctionalExtensions;
 using LedScreenLibNetWrapper;
 using LedScreenLibNetWrapper.Impl;
+using Serilog;
 
 namespace SibWay.SibWayApi
 {
@@ -34,10 +35,10 @@ namespace SibWay.SibWayApi
 
     public class SibWayProxy : INotifyPropertyChanged, IDisposable
     {
+        private readonly ILogger _logger;
         private byte _countTryingTakeData;               //счетчик попыток
         
         #region prop
-
         public DisplayDriver DisplayDriver { get; set; } = new DisplayDriver();
         public SettingSibWay SettingSibWay { get; set; }
 
@@ -81,14 +82,14 @@ namespace SibWay.SibWayApi
                 OnPropertyChanged();
             }
         }
-
         #endregion
 
 
         
         #region ctor
-        public SibWayProxy(SettingSibWay settingSibWay)
+        public SibWayProxy(SettingSibWay settingSibWay, ILogger logger)
         {
+            _logger = logger;
             SettingSibWay = settingSibWay;
         }
         #endregion
@@ -112,21 +113,26 @@ namespace SibWay.SibWayApi
                 try
                 {
                     DisplayDriver.Initialize(SettingSibWay.Ip, SettingSibWay.Port);
+                    StatusString = $"Conect to {SettingSibWay.Ip} : {SettingSibWay.Port} ...";
                     var errorCode = await OpenConnectionAsync();
                     IsConnect = (errorCode == ErrorCode.ERROR_SUCCESS);
                     //IsConnect = true;//DEBUG!!!!!!!!!!!!!!!
-                    StatusString = $"Conect to {SettingSibWay.Ip} : {SettingSibWay.Port} ...";
+                    if (!_isConnect)
+                    {
+                        _logger.Warning("{Connection2SibWay}   {errorCode}", StatusString, errorCode);
+                    }
                     await Task.Delay(SettingSibWay.Time2Reconnect);
                 }
                 catch (Exception ex)
                 {
                     IsConnect = false;
                     StatusString = $"Ошибка инициализации соединения: \"{ex.Message}\"";
-                    //LogException.WriteLog("Инициализация: ", ex, LogException.TypeLog.TcpIp);
+                    _logger.Error("{Connection2SibWay}", StatusString);
                     Dispose();
                 }
             }
             StatusString = $"Conect Sucsess: {SettingSibWay.Ip} : {SettingSibWay.Port} ...";
+            _logger.Information("{Connection2SibWay}", StatusString);
         }
         
         /// <summary>
@@ -184,23 +190,21 @@ namespace SibWay.SibWayApi
                             {
                                 //Debug.WriteLine($"RECONNECT:  {DateTime.Now:mm:ss}");
                                 ReConnect();
-                                return Result.Failure("Ошибок слишком много ушли на РЕКОННЕКТ");
+                                return Result.Failure("Ошибок слишком много, ушли на РЕКОННЕКТ");
                             }
                         }
-                     
                         await Task.Delay(winSett.DelayBetweenSending);
                     }
                 }
             }
             catch (Exception ex)
             {
-                // rtb_Status.Text += ex + "\n";
+                return Result.Failure($"SendData НЕ известная ошибка '{ex.Message}'");
             }
             finally
             {
                 IsRunDataExchange = false;
             }
-
             return Result.Success();
         }
 
@@ -354,7 +358,7 @@ namespace SibWay.SibWayApi
             {
                 RemoveColumnChange(winSett.ColumnName);
                 //Debug.WriteLine($"error = {err}");
-                //Log.log.Error($"SibWayProxy SendMessageAsync respown statys {err}");
+                _logger.Error("{SendMessage2SibWay}", $"SibWayProxy SendMessageAsync respown statys {err}");
             }
 
             StatusString = "Отправка на экран " + winSett.Number + "errorCode= " + err + "\n";
@@ -463,16 +467,3 @@ namespace SibWay.SibWayApi
         #endregion
     }
 }
-
-
-
-//var delayTask = Task.Delay(3000);
-
-//var firstToFinish = await Task.WhenAny(sendingTask, delayTask);
-//            if (firstToFinish == delayTask)
-//            {
-//                DictSendingStrings.Remove(winSett.ColumnName);//Удалить отправленную строку, для повторной отпарвки.
-//                Debug.WriteLine($"TimeOut>>>>><<<<<<<<<");
-//            }
-
-//            var err = await sendingTask;
