@@ -2,16 +2,16 @@
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 
-namespace SibWay.Services
+namespace SibWay.Infrastructure
 {
     public class EventBus
     {
-        private ISubject<object> Subject { get;} = new Subject<object>();
+        private readonly ISubject<object> _subject  = new Subject<object>();
 
 
         public IDisposable Subscrube<T>(Action<T> onNext) where T : class
         {
-            return Subject
+            return _subject
                 .Where(i=> i.GetType() == typeof(T))
                 .Select(o => o as T)
                 .Subscribe(onNext, () => {});
@@ -19,7 +19,7 @@ namespace SibWay.Services
         
         public void Publish<T>(T val) where T : class
         {
-            Subject.OnNext(val);
+            _subject.OnNext(val);
         }
     }
 }

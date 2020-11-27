@@ -6,6 +6,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using CSharpFunctionalExtensions;
 using LedScreenLibNetWrapper;
 using LedScreenLibNetWrapper.Impl;
 
@@ -138,10 +139,10 @@ namespace SibWay.SibWayApi
         }
 
         
-        public async Task<bool> SendData(IList<ItemSibWay> sibWayItems)
+        public async Task<Result> SendData(IList<ItemSibWay> sibWayItems)
         {
             if (!IsConnect)
-                return false;
+                return Result.Failure("Not connect ...");
             
             IsRunDataExchange = true;
             try
@@ -183,7 +184,7 @@ namespace SibWay.SibWayApi
                             {
                                 //Debug.WriteLine($"RECONNECT:  {DateTime.Now:mm:ss}");
                                 ReConnect();
-                                return false;
+                                return Result.Failure("Ошибок слишком много ушли на РЕКОННЕКТ");
                             }
                         }
                      
@@ -200,7 +201,7 @@ namespace SibWay.SibWayApi
                 IsRunDataExchange = false;
             }
 
-            return true;
+            return Result.Success();
         }
 
         

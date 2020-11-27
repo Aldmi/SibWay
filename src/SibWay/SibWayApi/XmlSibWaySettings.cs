@@ -24,7 +24,7 @@ namespace SibWay.SibWayApi
         /// <summary>
         /// Обязательно вызывать в блоке try{}
         /// </summary>
-        public static List<XmlSibWaySettings> LoadXmlSetting(XElement xml)
+        public static List<XmlSibWaySettings> ParseXmlSetting(XElement xml)
         {
             var devSibWay= xml?.Element("DevicesWithSibWayApi")?.Elements("SibWay").ToList();
             var listHttpSett= new List<XmlSibWaySettings>();

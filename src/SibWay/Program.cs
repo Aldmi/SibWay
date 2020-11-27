@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Options;
 using SibWay.Application;
 using SibWay.Application.EventHandlers;
-using SibWay.Controllers;
+using SibWay.Infrastructure;
 using SibWay.Services;
 using SibWay.Settings;
 using SibWay.SibWayApi;
@@ -17,7 +17,7 @@ namespace SibWay
         public static async Task Main(string[] args)
         {
             var eventBus= new EventBus();
-            eventBus.Subscrube<GetDataEventItem>(async o =>
+            eventBus.Subscrube<GetDataEventItem>(async o =>  //DEBUG
             {
                 await Task.Delay(1000);
             });
@@ -38,7 +38,7 @@ namespace SibWay
             
             eventBus.Publish(new GetDataEventItem{TableName = "dsdsd"});//DEBUG
             eventBus.Publish("dsds");//DEBUG
-            var bg= new BackgroundProcessController(sibWayReconnectTasks);
+            var bg= new BackgroundProcessService(sibWayReconnectTasks);
             await bg.WhenAll();
         }
     }

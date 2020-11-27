@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Threading.Tasks;
 
-namespace SibWay.Controllers
+namespace SibWay.Services
 {
-    public class BackgroundProcessController
+    public class BackgroundProcessService
     {
         private readonly Task[] _process;
 
-        public BackgroundProcessController(params Task[] process)
+        public BackgroundProcessService(params Task[] process)
         {
             _process = process;
         }

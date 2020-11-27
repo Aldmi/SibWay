@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using SibWay.Application.EventHandlers;
+using SibWay.Infrastructure;
 using SibWay.Services;
 using SibWay.SibWayApi;
 
