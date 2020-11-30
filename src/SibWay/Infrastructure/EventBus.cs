@@ -7,8 +7,7 @@ namespace SibWay.Infrastructure
     public class EventBus
     {
         private readonly ISubject<object> _subject  = new Subject<object>();
-
-
+        
         public IDisposable Subscrube<T>(Action<T> onNext,Action<Exception> onError, Action onCompleted) where T : class
         {
             return _subject

@@ -19,7 +19,7 @@ namespace SibWay.Application
         private readonly IReadOnlyList<SibWayProxy> _sibWays;
         private readonly EventBus _eventBus;
         private readonly ILogger _logger;
-        private readonly IDisposable GetDataEventItemRxLifeTime;
+        private readonly IDisposable _getDataEventItemRxLifeTime;
 
 
         public App(IReadOnlyList<SibWayProxy> sibWays, EventBus eventBus, ILogger logger)
@@ -27,7 +27,7 @@ namespace SibWay.Application
             _sibWays = sibWays ?? throw new ArgumentNullException(nameof(sibWays));
             _eventBus = eventBus;
             _logger = logger;
-            GetDataEventItemRxLifeTime= eventBus.Subscrube<InputDataEventItem>(
+            _getDataEventItemRxLifeTime= eventBus.Subscrube<InputDataEventItem>(
                 GetDataRxHandler,
                 ex =>
                 {
@@ -57,7 +57,8 @@ namespace SibWay.Application
 
            //Отправить данные на табло и результат отпарвки опубликовать на шину данных
            var res= await table.SendData(data.Datas);
-           _eventBus.Publish(new SibWayResponseItem(res));
+           //await Task.Delay(100);//DEBUG
+           _eventBus.Publish(new SibWayResponseItem(table.SettingSibWay.Ip, res)); //TODO: TableName должен быть в настройках
            
            //Оценить Result залогировать ошибку 
         }
@@ -65,7 +66,7 @@ namespace SibWay.Application
         
         public void Dispose()
         {
-            GetDataEventItemRxLifeTime.Dispose();
+            _getDataEventItemRxLifeTime.Dispose();
             foreach (var sibWay in _sibWays)
             {
                 sibWay.Dispose();

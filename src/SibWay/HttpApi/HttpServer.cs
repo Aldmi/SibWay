@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reactive.Linq;
+using System.Reactive.Threading.Tasks;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -88,7 +89,12 @@ namespace SibWay.HttpApi
 
 
         private async Task<Result> HttpListenerContextHandlerAsync(HttpListenerContext context, CancellationToken ct)  //TODO: заменить на ValueTask и возможно возвращать Result<HttpListenerContext>, чтобы после отработки Task закрыть conext вручную
-        {
+        { 
+           var sibWayResponseObservableTask=  _eventBus
+               .Subscrube<SibWayResponseItem>()
+               .FirstAsync()
+               .ToTask(ct);
+           
            var contextRes= await RequestHandler(context.Request)
                 .Bind(inDate =>
                 {
@@ -99,15 +105,15 @@ namespace SibWay.HttpApi
                 .Bind(async () =>
                 {
                     //Ждем ответа от SibWay об отправки входных данных. 
-                    var sibWayResponse= await _eventBus.Subscrube<SibWayResponseItem>().FirstAsync();
+                    var sibWayResponse = await sibWayResponseObservableTask;
                     return sibWayResponse.Result;
                 })
-                .Bind(async () =>
+                .Finally(async result =>
                 {
-                    //Формируем ответ клиенту.
+                    //TODO: возможно передавать ответ
+                    //Формируем ответ клиенту в Зависимости от результата.
                     return await ResponseHandler(context.Response);
-                })              //TODO: возможно передавать ответ
-                .Finally(result => result);
+                });
            
            return contextRes;
         }
