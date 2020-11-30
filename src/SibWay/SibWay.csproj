@@ -263,16 +263,15 @@
     </ItemGroup>
     <ItemGroup>
         <Compile Include="Application\App.cs" />
+        <Compile Include="Application\Dto\AdInputType4XmlDto.cs" />
         <Compile Include="Application\EventHandlers\InputDataEventItem.cs" />
-        <Compile Include="Application\EventHandlers\SibWaySendDataResponse.cs" />
-        <Compile Include="Domain\AdInputType4XmlDtoFactory.cs" />
-        <Compile Include="Domain\Dto\AdInputType4XmlDto.cs" />
-        <Compile Include="Domain\Mapper.cs" />
+        <Compile Include="Application\EventHandlers\SibWayResponseItem.cs" />
         <Compile Include="HttpApi\HttpServer.cs" />
         <Compile Include="Infrastructure\EventBus.cs" />
         <Compile Include="Program.cs" />
         <Compile Include="Properties\AssemblyInfo.cs" />
         <Compile Include="Services\BackgroundProcessService.cs" />
+        <Compile Include="Services\Mapper.cs" />
         <Compile Include="Settings\SettingsLoader.cs" />
         <Compile Include="Settings\XmlHelpers.cs" />
         <Compile Include="SibWayApi\ItemSibWay.cs" />

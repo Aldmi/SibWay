@@ -17,6 +17,13 @@ namespace SibWay.Infrastructure
                 .Subscribe(onNext, onError, onCompleted);
         }
         
+        public IObservable<T> Subscrube<T>() where T : class
+        {
+            return _subject
+                .Where(i => i.GetType() == typeof(T))
+                .Select(o => o as T);
+        }
+        
         public void Publish<T>(T val) where T : class
         {
             _subject.OnNext(val);

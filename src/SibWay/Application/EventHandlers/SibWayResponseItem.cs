@@ -2,9 +2,9 @@
 
 namespace SibWay.Application.EventHandlers
 {
-    public class SibWaySendDataResponse
+    public class SibWayResponseItem
     {
-        public SibWaySendDataResponse(Result result)
+        public SibWayResponseItem(Result result)
         {
             Result = result;
         }

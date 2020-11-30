@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Xml.Serialization;
 
-namespace SibWay.Domain.Dto
+namespace SibWay.Application.Dto
 {
 
     [Serializable]

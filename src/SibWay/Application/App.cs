@@ -57,7 +57,7 @@ namespace SibWay.Application
 
            //Отправить данные на табло и результат отпарвки опубликовать на шину данных
            var res= await table.SendData(data.Datas);
-           _eventBus.Publish(new SibWaySendDataResponse(res));
+           _eventBus.Publish(new SibWayResponseItem(res));
            
            //Оценить Result залогировать ошибку 
         }

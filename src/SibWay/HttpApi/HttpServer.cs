@@ -3,14 +3,16 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Reactive.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using CSharpFunctionalExtensions;
 using Serilog;
 using SibWay.Application.EventHandlers;
-using SibWay.Domain;
 using SibWay.Infrastructure;
+using SibWay.Services;
+using SibWay.Settings;
 
 namespace SibWay.HttpApi
 {
@@ -80,49 +82,56 @@ namespace SibWay.HttpApi
                     var handler = HttpListenerContextHandlerAsync(context, ct);
                     _httpContextHandlers.Add(handler);
                 }
-                catch (TaskCanceledException ex) { }
+                catch (TaskCanceledException) { }
             }
         }
 
 
         private async Task<Result> HttpListenerContextHandlerAsync(HttpListenerContext context, CancellationToken ct)  //TODO: заменить на ValueTask и возможно возвращать Result<HttpListenerContext>, чтобы после отработки Task закрыть conext вручную
         {
-            var (_, isFailureReq, errorReq) = await RequestHandler(context.Request);
-            if (isFailureReq)
-            {
-                return Result.Failure(errorReq);
-            }
-            var (_, isFailureResp, errorResp) = await ResponseHandler(context.Response);
-            if (isFailureResp)
-            {
-                return Result.Failure(errorResp);
-            }
-
-            return Result.Success();
+           var contextRes= await RequestHandler(context.Request)
+                .Bind(inDate =>
+                {
+                    //Публикуем входные данные на шину.
+                    _eventBus.Publish(inDate);
+                    return Result.Success();
+                })
+                .Bind(async () =>
+                {
+                    //Ждем ответа от SibWay об отправки входных данных. 
+                    var sibWayResponse= await _eventBus.Subscrube<SibWayResponseItem>().FirstAsync();
+                    return sibWayResponse.Result;
+                })
+                .Bind(async () =>
+                {
+                    //Формируем ответ клиенту.
+                    return await ResponseHandler(context.Response);
+                })              //TODO: возможно передавать ответ
+                .Finally(result => result);
+           
+           return contextRes;
         }
 
 
-        private async Task<Result> RequestHandler(HttpListenerRequest request) //TODO: пременить Result.Combine
+        private async Task<Result<InputDataEventItem>> RequestHandler(HttpListenerRequest request) //TODO: пременить Result.Combine
         {
             _logger.Information("{HttpServer}", "Получили запрос");
             var tableNameRes = ParseUrl(request);
-            
             var xmlStrRes= await ParsePostBody(request);
-            if(xmlStrRes.IsFailure)
-                return Result.Failure(xmlStrRes.Error);
-            
-            var inTypeResult =  AdInputType4XmlDtoFactory.DeserializeFromXml(xmlStrRes.Value);
-
-            var sibWayMappingRes = Mapper.MapAdInputType4XmlDtoContainer2ListItemSibWay(inTypeResult.Value).ToList();
-            
-            //Публикуем полученные данные на шину.    
-            var inType = new InputDataEventItem
-            {
-                TableName = tableNameRes.Value,
-                Datas = sibWayMappingRes
-            };
-            _eventBus.Publish(inType);
-            return Result.Success();
+            var postDataRes= Result.Combine(tableNameRes, xmlStrRes)
+                .Bind(() => XmlHelpers.DeserializeFromXml(xmlStrRes.Value))
+                .Bind(deserializedXml => Mapper.MapAdInputType4XmlDtoContainer2ListItemSibWay(deserializedXml))
+                .Bind(listItemSibWay =>
+                {
+                    var inType = new InputDataEventItem
+                    {
+                        TableName = tableNameRes.Value,
+                        Datas = listItemSibWay
+                    };
+                    return Result.Success(inType);
+                })
+                .Finally(result => result);
+            return postDataRes;
         }
 
         
