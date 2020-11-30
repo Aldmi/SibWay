@@ -263,7 +263,12 @@
     </ItemGroup>
     <ItemGroup>
         <Compile Include="Application\App.cs" />
-        <Compile Include="Application\EventHandlers\GetDataEventItem.cs" />
+        <Compile Include="Application\EventHandlers\InputDataEventItem.cs" />
+        <Compile Include="Application\EventHandlers\SibWaySendDataResponse.cs" />
+        <Compile Include="Domain\AdInputType4XmlDtoFactory.cs" />
+        <Compile Include="Domain\Dto\AdInputType4XmlDto.cs" />
+        <Compile Include="Domain\Mapper.cs" />
+        <Compile Include="HttpApi\HttpServer.cs" />
         <Compile Include="Infrastructure\EventBus.cs" />
         <Compile Include="Program.cs" />
         <Compile Include="Properties\AssemblyInfo.cs" />
@@ -277,9 +282,6 @@
     </ItemGroup>
     <ItemGroup>
       <None Include="packages.config" />
-    </ItemGroup>
-    <ItemGroup>
-      <Folder Include="HttpApi" />
     </ItemGroup>
     <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
     <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">

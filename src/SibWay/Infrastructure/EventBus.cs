@@ -9,17 +9,27 @@ namespace SibWay.Infrastructure
         private readonly ISubject<object> _subject  = new Subject<object>();
 
 
-        public IDisposable Subscrube<T>(Action<T> onNext) where T : class
+        public IDisposable Subscrube<T>(Action<T> onNext,Action<Exception> onError, Action onCompleted) where T : class
         {
             return _subject
                 .Where(i=> i.GetType() == typeof(T))
                 .Select(o => o as T)
-                .Subscribe(onNext, () => {});
+                .Subscribe(onNext, onError, onCompleted);
         }
         
         public void Publish<T>(T val) where T : class
         {
             _subject.OnNext(val);
+        }
+        
+        public void OnCompleted() 
+        {
+            _subject.OnCompleted();
+        }
+        
+        public void OnError(Exception ex) 
+        {
+            _subject.OnError(ex);
         }
     }
 }

@@ -1,16 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Options;
+using CSharpFunctionalExtensions;
 using Serilog;
-using Serilog.Core;
 using Serilog.Events;
 using SibWay.Application;
-using SibWay.Application.EventHandlers;
+using SibWay.HttpApi;
 using SibWay.Infrastructure;
 using SibWay.Services;
-using SibWay.Settings;
 using SibWay.SibWayApi;
 
 
@@ -27,10 +24,10 @@ namespace SibWay
                 .CreateLogger();
             
             var eventBus= new EventBus();
-            eventBus.Subscrube<GetDataEventItem>(async o =>  //DEBUG
-            {
-                await Task.Delay(1000);
-            });
+            // eventBus.Subscrube<GetDataEventItem>(async o =>  //DEBUG
+            // {
+            //     await Task.Delay(1000);
+            // });
 
             //Создание App на базе sibWayProxies и запуск BG ReConnect.
             //var xmlSibWaySett = await SettingsLoader.LoadXmlSibWaySettings();
@@ -45,15 +42,48 @@ namespace SibWay
             var app= new App(sibWayProxies, eventBus, Log.Logger);
             
             //Создание HttpListener и запуск BG обработки запросов.
+            var httpServer= new HttpServer("http://localhost:44888/api/InputData/SendDataXmlMultipart4Devices/",eventBus, Log.Logger);
+            StartHttpListenerCommand(httpServer);
+            //DEBUG-------------------
+            // await Task.Delay(2000);
+            // StopHttpListenerCommand(httpServer);
+            // await Task.Delay(3000);
+            // StartHttpListenerCommand(httpServer);
+            //DEBUG------------------
             
-            eventBus.Publish(new GetDataEventItem{TableName = "dsdsd"});//DEBUG
-            eventBus.Publish("dsds");//DEBUG
-            var bg= new BackgroundProcessService(Log.Logger, sibWayReconnectTasks);
             
+            var bg= new BackgroundProcessService(Log.Logger, sibWayReconnectTasks); //TODO: Поместить httpListenTask ???
             Log.Information("SibWay Start !!!");
             await bg.WhenAll();
             Log.Information("SibWay Stop !!!");
             Log.CloseAndFlush();
+        }
+
+
+        public static void StartHttpListenerCommand(HttpServer httpServer)
+        {
+            var (_, isFailure, httpListenTask, startHttpListenError) = httpServer.StartListen();
+            if (isFailure)
+            {
+                Log.Logger.Error("Ошибка запуска HttpListener '{HttpListener}'", startHttpListenError);
+            }
+            else
+            {
+                Log.Logger.Information("HttpListener '{HttpListener}'", "Успешно запущен");
+            }
+        }
+        
+        public static void StopHttpListenerCommand(HttpServer httpServer)
+        {
+            var (_, isFailure, error) = httpServer.StopListen();
+            if (isFailure)
+            {
+                Log.Logger.Error("Ошибка останова HttpListener '{HttpListener}'", error);
+            }
+            else
+            {
+                Log.Logger.Information("HttpListener '{HttpListener}'", "Успешно остановлен");
+            }
         }
     }
 }
