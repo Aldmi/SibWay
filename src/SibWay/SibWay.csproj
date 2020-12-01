@@ -134,6 +134,10 @@
           <Private>True</Private>
         </Reference>
         <Reference Include="mscorlib" />
+        <Reference Include="Newtonsoft.Json, Version=12.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed">
+          <HintPath>..\packages\Newtonsoft.Json.12.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+          <Private>True</Private>
+        </Reference>
         <Reference Include="Nito.AsyncEx.Context, Version=5.0.0.0, Culture=neutral, PublicKeyToken=null">
           <HintPath>..\packages\Nito.AsyncEx.Context.5.0.0\lib\netstandard2.0\Nito.AsyncEx.Context.dll</HintPath>
           <Private>True</Private>
@@ -264,6 +268,7 @@
     <ItemGroup>
         <Compile Include="Application\App.cs" />
         <Compile Include="Application\Dto\AdInputType4XmlDto.cs" />
+        <Compile Include="Application\Dto\IndigoResponseDto.cs" />
         <Compile Include="Application\EventHandlers\InputDataEventItem.cs" />
         <Compile Include="Application\EventHandlers\SibWayResponseItem.cs" />
         <Compile Include="HttpApi\HttpServer.cs" />

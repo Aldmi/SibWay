@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using CSharpFunctionalExtensions;
 using Serilog;
+using SibWay.Application.Dto;
 using SibWay.Application.EventHandlers;
 using SibWay.Infrastructure;
 using SibWay.Services;
@@ -90,7 +91,7 @@ namespace SibWay.HttpApi
 
         private async Task<Result> HttpListenerContextHandlerAsync(HttpListenerContext context, CancellationToken ct)  //TODO: заменить на ValueTask и возможно возвращать Result<HttpListenerContext>, чтобы после отработки Task закрыть conext вручную
         { 
-           var sibWayResponseObservableTask=  _eventBus
+           var responseTask=  _eventBus
                .Subscrube<SibWayResponseItem>()
                .FirstAsync()
                .ToTask(ct);
@@ -98,21 +99,20 @@ namespace SibWay.HttpApi
            var contextRes= await RequestHandler(context.Request)
                 .Bind(inDate =>
                 {
-                    //Публикуем входные данные на шину.
+                    //Публикуем полученные входные данные на шину.
                     _eventBus.Publish(inDate);
                     return Result.Success();
                 })
                 .Bind(async () =>
                 {
                     //Ждем ответа от SibWay об отправки входных данных. 
-                    var sibWayResponse = await sibWayResponseObservableTask;
+                    var sibWayResponse = await responseTask;
                     return sibWayResponse.Result;
                 })
                 .Finally(async result =>
                 {
-                    //TODO: возможно передавать ответ
                     //Формируем ответ клиенту в Зависимости от результата.
-                    return await ResponseHandler(context.Response);
+                    return await ResponseHandler(context.Response, result);
                 });
            
            return contextRes;
@@ -147,11 +147,11 @@ namespace SibWay.HttpApi
                 return Result.Failure<string>("HttpMethod != POST");
             
             var tableName = request.RawUrl.Split('/').Last();
-            if (tableName == "SendDataXmlMultipart4Devices")
-                return Result.Failure<string>("Имя табло не указано в адрессе!!");
-
-            return tableName;
+            return tableName == "SendDataXmlMultipart4Devices" ?
+                Result.Failure<string>("Имя табло не указано в адрессе!!") :
+                tableName;
         }
+        
         
         private async Task<Result<string>> ParsePostBody(HttpListenerRequest request)
         {
@@ -178,45 +178,27 @@ namespace SibWay.HttpApi
         }
         
         
-        //TODO: вынести в отдельный класс
-        private async Task<Result<InputDataEventItem>> ParseInpudDateFromHttpRequest(HttpListenerRequest request)
+        private async Task<Result> ResponseHandler(HttpListenerResponse response, Result responseRes)
         {
-            if (request.HttpMethod != "POST")
-                return Result.Failure<InputDataEventItem>("HttpMethod != POST");
-            
-            var tableName = request.RawUrl.Split('/').Last();
-            if (tableName == "SendDataXmlMultipart4Devices")
-                return Result.Failure<InputDataEventItem>("Имя табло не указано в адрессе!!");
-            
-            using (var input = request.InputStream)
-            {
-                var streamReader = new StreamReader(input);
-                var body = await streamReader.ReadToEndAsync();
-                var clearBody = body
-                    .Replace("\r", String.Empty)
-                    .Replace("\n", String.Empty)
-                    .Replace("\t", String.Empty);
-                const string pattern = "(<tlist>.*?</tlist>)";
-                var match = Regex.Match(clearBody, pattern);
-                if (!match.Success)
-                    return Result.Failure<InputDataEventItem>("Формат XML не верен");
-                    
-                var xmlString = match.Groups[1].Value;
-                input.Close();
-            }
+            var indigoRespDto= responseRes.IsFailure ? new IndigoResponseDto(0, responseRes.Error) : new IndigoResponseDto(1,  "Ok"); 
+            _logger.Information("{HttpServer} {@ResponseResult}", "Готовим ответ ...", indigoRespDto);
 
-            
-            return Result.Success(new InputDataEventItem{TableName = $"TableName_{DateTime.Now:T}"});
-        }
-        
-        
-        private async Task<Result> ResponseHandler(HttpListenerResponse response)
-        {
-            _logger.Information("{HttpServer}", "Готовим ответ ...");
-            
-            
-     
-            
+            try
+            {
+                string responseString = indigoRespDto.ToString();
+                byte[] buffer = System.Text.Encoding.UTF8.GetBytes(responseString);
+                response.ContentType = "Application/json";
+                response.ContentLength64 = buffer.Length;
+                using (var output = response.OutputStream)
+                {
+                    await output.WriteAsync(buffer, 0, buffer.Length);
+                    output.Close();
+                }
+            }
+            catch (Exception ex)
+            {
+                return Result.Failure($"Ошибка подготовки ответа. Exception: '{ex}'");
+            }
             return Result.Success();
         }
 
