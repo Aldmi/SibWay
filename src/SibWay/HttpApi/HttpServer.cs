@@ -25,7 +25,10 @@ namespace SibWay.HttpApi
         private readonly EventBus _eventBus;
         private readonly ILogger _logger;
         private CancellationTokenSource _cts;
-        private readonly  HashSet<Task<Result>> _httpContextHandlers = new HashSet<Task<Result>>(); //TODO: сделать контроль этих ЗАДАЧ. Т.Е. выполненные задачи убирать из списка и писать в лог результат ввыполнения.
+   
+        private readonly  HashSet<Task<Result>> _httpContextTasks = new HashSet<Task<Result>>();
+        private Task _bgTask;
+
         #endregion
 
 
@@ -57,6 +60,8 @@ namespace SibWay.HttpApi
                 return Result.Failure<Task>("Задача уже запущена и не была остановленна");
             }
             _cts =  new CancellationTokenSource();
+            
+            _bgTask = BackgroundController4ContextHandlers(_cts.Token);
             return ListenHttpAsync(_cts.Token);
         }
         
@@ -71,7 +76,25 @@ namespace SibWay.HttpApi
             return Result.Success();
         }
 
+        /// <summary>
+        /// контроль за задоачей обработки запроса.
+        /// По завершениию обработки удалить задачу из очереди.
+        /// </summary>
+        private async Task BackgroundController4ContextHandlers(CancellationToken ct)
+        {
+            while (!ct.IsCancellationRequested)
+            {
+                var completedTask = await Task.WhenAny(_httpContextTasks);
+                _httpContextTasks.Remove(completedTask);
 
+                var res = completedTask.Result;
+                var strResult = res.ToString();
+                _logger.Information("{HttpServer}","ЗАПРОС ОБРАБОТАН", strResult);
+            }
+            _logger.Information("{HttpServer}","ФОНОВАЯ обработка запросов остановленна");
+        }
+        
+        
         private async Task ListenHttpAsync(CancellationToken ct)
         {
             _listener.Start();
@@ -82,7 +105,7 @@ namespace SibWay.HttpApi
                 {
                     var context = await _listener.GetContextAsync();
                     var handler = HttpListenerContextHandlerAsync(context, ct);
-                    _httpContextHandlers.Add(handler);
+                    _httpContextTasks.Add(handler);
                 }
                 catch (TaskCanceledException) { }
             }
