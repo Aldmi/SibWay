@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -9,6 +10,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using CSharpFunctionalExtensions;
+using Nito.AsyncEx;
 using Serilog;
 using SibWay.Application.Dto;
 using SibWay.Application.EventHandlers;
@@ -25,8 +27,8 @@ namespace SibWay.HttpApi
         private readonly EventBus _eventBus;
         private readonly ILogger _logger;
         private CancellationTokenSource _cts;
-   
-        private readonly  HashSet<Task<Result>> _httpContextTasks = new HashSet<Task<Result>>();
+
+        private BlockingCollection<Task<Result>> _httpContextTasks;
         private Task _bgTask;
 
         #endregion
@@ -59,8 +61,9 @@ namespace SibWay.HttpApi
             {
                 return Result.Failure<Task>("Задача уже запущена и не была остановленна");
             }
+            _httpContextTasks = new BlockingCollection<Task<Result>>();
             _cts =  new CancellationTokenSource();
-            
+            _listener.Start();
             _bgTask = BackgroundController4ContextHandlers(_cts.Token);
             return ListenHttpAsync(_cts.Token);
         }
@@ -72,7 +75,9 @@ namespace SibWay.HttpApi
             {
                 return Result.Failure<Task>("Задача НЕ запущена или была остановленна!!!");
             }
+            //_httpContextTasks.CompleteAdding();
             _cts.Cancel();
+            _listener.Stop();
             return Result.Success();
         }
 
@@ -80,24 +85,23 @@ namespace SibWay.HttpApi
         /// контроль за задоачей обработки запроса.
         /// По завершениию обработки удалить задачу из очереди.
         /// </summary>
-        private async Task BackgroundController4ContextHandlers(CancellationToken ct)
+        private  Task BackgroundController4ContextHandlers(CancellationToken ct)
         {
-            while (!ct.IsCancellationRequested)
+           return Task.Run(async () =>
             {
-                var completedTask = await Task.WhenAny(_httpContextTasks);
-                _httpContextTasks.Remove(completedTask);
-
-                var res = completedTask.Result;
-                var strResult = res.ToString();
-                _logger.Information("{HttpServer}","ЗАПРОС ОБРАБОТАН", strResult);
-            }
-            _logger.Information("{HttpServer}","ФОНОВАЯ обработка запросов остановленна");
+                foreach (var task in _httpContextTasks.GetConsumingEnumerable())
+                {
+                    var res = await task;
+                    var strResult = res.ToString();
+                    _logger.Error("{HttpServer}","ЗАПРОС ОБРАБОТАН >>>>>>>>>>>>>>>>>>>", strResult);
+                }
+                _logger.Information("{HttpServer}","ФОНОВАЯ обработка запросов остановленна");
+            }, ct);
         }
         
         
         private async Task ListenHttpAsync(CancellationToken ct)
         {
-            _listener.Start();
             _logger.Information("{HttpServer}", "Ожидание запросов ...");
             while (!ct.IsCancellationRequested)
             {
@@ -105,7 +109,7 @@ namespace SibWay.HttpApi
                 {
                     var context = await _listener.GetContextAsync();
                     var handler = HttpListenerContextHandlerAsync(context, ct);
-                    _httpContextTasks.Add(handler);
+                    _httpContextTasks.Add(handler, ct);
                 }
                 catch (TaskCanceledException) { }
             }
@@ -142,7 +146,7 @@ namespace SibWay.HttpApi
         }
 
 
-        private async Task<Result<InputDataEventItem>> RequestHandler(HttpListenerRequest request) //TODO: пременить Result.Combine
+        private async Task<Result<InputDataEventItem>> RequestHandler(HttpListenerRequest request)
         {
             _logger.Information("{HttpServer}", "Получили запрос");
             var tableNameRes = ParseUrl(request);

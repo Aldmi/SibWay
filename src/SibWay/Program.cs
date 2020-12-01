@@ -24,13 +24,7 @@ namespace SibWay
                 .CreateLogger();
             
             var eventBus= new EventBus();
-            // eventBus.Subscrube<GetDataEventItem>(async o =>  //DEBUG
-            // {
-            //     await Task.Delay(1000);
-            // });
 
-            //Создание App на базе sibWayProxies и запуск BG ReConnect.
-            //var xmlSibWaySett = await SettingsLoader.LoadXmlSibWaySettings();
             var xmlSibWaySett = new List<XmlSibWaySettings>
             {
                 new XmlSibWaySettings {
@@ -45,9 +39,9 @@ namespace SibWay
             var httpServer= new HttpServer("http://localhost:44888/api/InputData/SendDataXmlMultipart4Devices/",eventBus, Log.Logger);
             StartHttpListenerCommand(httpServer);
             //DEBUG-------------------
-            // await Task.Delay(2000);
+            // await Task.Delay(8000);
             // StopHttpListenerCommand(httpServer);
-            // await Task.Delay(3000);
+            // await Task.Delay(8000);
             // StartHttpListenerCommand(httpServer);
             //DEBUG------------------
             
