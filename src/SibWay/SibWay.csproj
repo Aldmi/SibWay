@@ -272,6 +272,7 @@
         <Compile Include="Application\EventHandlers\InputDataEventItem.cs" />
         <Compile Include="Application\EventHandlers\SibWayResponseItem.cs" />
         <Compile Include="HttpApi\HttpServer.cs" />
+        <Compile Include="HttpApi\XmlHttpServerSettings.cs" />
         <Compile Include="Infrastructure\EventBus.cs" />
         <Compile Include="Program.cs" />
         <Compile Include="Properties\AssemblyInfo.cs" />

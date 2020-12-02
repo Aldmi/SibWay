@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Threading.Tasks;
 using CSharpFunctionalExtensions;
+using SibWay.HttpApi;
 using SibWay.SibWayApi;
 
 namespace SibWay.Settings
@@ -10,7 +12,7 @@ namespace SibWay.Settings
     {
         public static async Task<Result<List<XmlSibWaySettings>>> LoadXmlSibWaySettings()
         {
-            var (_, isFailure, xmlFile, error) = XmlHelpers.LoadXmlFile("Settings", "Setting.xml"); //все настройки в одном файле
+            var (_, isFailure, xmlFile, error) = XmlHelpers.LoadXmlFile("Settings", "Setting.xml");
             if(isFailure)
                 return Result.Failure<List<XmlSibWaySettings>>("xmlFile == null");
             
@@ -22,6 +24,24 @@ namespace SibWay.Settings
             catch (Exception ex)
             {
                 return Result.Failure<List<XmlSibWaySettings>>($"ОШИБКА в узлах дерева XML файла настроек: '{ex}'");
+            }
+        }
+        
+        
+        public static async Task<Result<XmlHttpServerSettings>> LoadHttpServerSettings()
+        {
+            var (_, isFailure, xmlFile, error) = XmlHelpers.LoadXmlFile("Settings", "Setting.xml"); 
+            if(isFailure)
+                return Result.Failure<XmlHttpServerSettings>("xmlFile == null");
+            
+            try
+            {
+                var setting = XmlHttpServerSettings.ParseXmlSetting(xmlFile);
+                return setting;
+            }
+            catch (Exception ex)
+            {
+                return Result.Failure<XmlHttpServerSettings>($"ОШИБКА в узлах дерева XML файла настроек: '{ex}'");
             }
         }
     }

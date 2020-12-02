@@ -19,7 +19,8 @@ namespace SibWay
     {
         private static ILogger _logger;
         private static EventBus _eventBus;
-        
+        private static App _app;
+
         public static async Task Main(string[] args)
         {
             Configure();
@@ -33,10 +34,17 @@ namespace SibWay
                 return;
             }
             var sibWayProxies= xmlSibWaySett.Select(xmlSett => new SibWayProxy(xmlSett.SettingSibWay, Log.Logger)).ToList();
-            var app= new App(sibWayProxies, _eventBus, Log.Logger);
+             _app= new App(sibWayProxies, _eventBus, Log.Logger);
             
             //Создание httpServer.-------------------------------------------------------------------
-            var httpServer= new HttpServer("http://localhost:44888/api/InputData/SendDataXmlMultipart4Devices/", _eventBus, Log.Logger);
+            var (_, isFailureHttpSettLoad, xmlHttpServSett, errorHttpSettLoad) = await SettingsLoader.LoadHttpServerSettings();
+            if (isFailureHttpSettLoad)
+            {
+                _logger.Fatal("{xmlSettings} {error}", "Ошибка загрузки XML", errorHttpSettLoad);
+                Console.ReadKey();
+                return;
+            }
+            var httpServer= new HttpServer(xmlHttpServSett.EndpointAddress, _eventBus, Log.Logger);
             
             //Запуск фоновых задач.-------------------------------------------------------------------
             //1. Задачи коннекта всех табло SibWay.
@@ -44,21 +52,19 @@ namespace SibWay
             //2. Создание HttpListener и запуск BG обработки запросов.
             var listenHttpTask= httpServer.StartListen().Value;
             
-            
             //DEBUG-------------------
              //await Task.Delay(3000);
              //StopHttpListenerCommand(httpServer);
             // await Task.Delay(8000);
             // StartHttpListenerCommand(httpServer);
             //DEBUG------------------
-
             
             var allTasks = new List<Task> {listenHttpTask};
             allTasks.AddRange(sibWayReconnectTasks);
             var bg= new BackgroundProcessService(Log.Logger, allTasks.ToArray());
-            Log.Information("SibWay Start !!!");
+            Log.Information("Allpication Loaded");
             bg.WaitAll();
-            Log.Information("SibWay Stop !!!");
+            Log.Information("Allpication Stoped");
             Log.CloseAndFlush();
         }
 
