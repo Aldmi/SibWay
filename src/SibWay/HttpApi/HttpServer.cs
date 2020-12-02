@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -10,7 +8,6 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using CSharpFunctionalExtensions;
-using Nito.AsyncEx;
 using Serilog;
 using SibWay.Application.Dto;
 using SibWay.Application.EventHandlers;
@@ -27,10 +24,6 @@ namespace SibWay.HttpApi
         private readonly EventBus _eventBus;
         private readonly ILogger _logger;
         private CancellationTokenSource _cts;
-
-        private BlockingCollection<Task<Result>> _httpContextTasks;
-        private Task _bgTask;
-
         #endregion
 
 
@@ -52,78 +45,81 @@ namespace SibWay.HttpApi
             _logger = logger;
         }
         #endregion
-        
-        
-        
+
+
+
+        #region Methode
         public Result<Task> StartListen()
         {
-            if(IsStart) //Токен создан и НЕ Остановлен
+            if(IsStart)
             {
                 return Result.Failure<Task>("Задача уже запущена и не была остановленна");
             }
-            _httpContextTasks = new BlockingCollection<Task<Result>>();
             _cts =  new CancellationTokenSource();
             _listener.Start();
-            _bgTask = BackgroundController4ContextHandlers(_cts.Token);
             return ListenHttpAsync(_cts.Token);
         }
         
         
         public Result StopListen()
         {
-            if(!IsStart) //Токен НЕ созданн или Остановленн 
+            if(!IsStart)
             {
                 return Result.Failure<Task>("Задача НЕ запущена или была остановленна!!!");
             }
-            //_httpContextTasks.CompleteAdding();
             _cts.Cancel();
             _listener.Stop();
             return Result.Success();
         }
 
-        /// <summary>
-        /// контроль за задоачей обработки запроса.
-        /// По завершениию обработки удалить задачу из очереди.
-        /// </summary>
-        private  Task BackgroundController4ContextHandlers(CancellationToken ct)
-        {
-           return Task.Run(async () =>
-            {
-                foreach (var task in _httpContextTasks.GetConsumingEnumerable())
-                {
-                    var res = await task;
-                    var strResult = res.ToString();
-                    _logger.Error("{HttpServer}","ЗАПРОС ОБРАБОТАН >>>>>>>>>>>>>>>>>>>", strResult);
-                }
-                _logger.Information("{HttpServer}","ФОНОВАЯ обработка запросов остановленна");
-            }, ct);
-        }
-        
         
         private async Task ListenHttpAsync(CancellationToken ct)
         {
             _logger.Information("{HttpServer}", "Ожидание запросов ...");
-            while (!ct.IsCancellationRequested)
+            while (true)
             {
                 try
                 {
                     var context = await _listener.GetContextAsync();
                     var handler = HttpListenerContextHandlerAsync(context, ct);
-                    _httpContextTasks.Add(handler, ct);
+                    handler.ContinueWith(t =>
+                    {
+                        if (t.IsCompleted)
+                        {
+                            var res = t.Result;
+                            if (res.IsSuccess)
+                            {
+                                _logger.Information("{HttpServer} {responseResult}","ЗАПРОС ОБРАБОТАН");
+                            }
+                            else
+                            {
+                                _logger.Error("{HttpServer} {responseResult}","ЗАПРОС ОБРАБОТАН С ОШИБКОЙ", res.Error);
+                            }
+                        }
+                        else
+                        { 
+                            _logger.Warning("{HttpServer}","Task ОБРАБОТКИ запроса завершилась Не удачей.");
+                        }
+                    }, ct);
                 }
-                catch (TaskCanceledException) { }
+                catch (OperationCanceledException ex)
+                {
+                    _logger.Information("{HttpServer}","Конец ожидания запросов", ex.Message);
+                }
             }
         }
 
 
         private async Task<Result> HttpListenerContextHandlerAsync(HttpListenerContext context, CancellationToken ct)  //TODO: заменить на ValueTask и возможно возвращать Result<HttpListenerContext>, чтобы после отработки Task закрыть conext вручную
-        { 
-           var responseTask=  _eventBus
+        {
+            //Формируем Id запроса, чтобы потом выделить Id ответа с шины данных.
+            var contextId = Guid.NewGuid();
+            var responseTask= _eventBus
                .Subscrube<SibWayResponseItem>()
-               .FirstAsync()
+               .FirstAsync(item => item.Id == contextId)
                .ToTask(ct);
            
-           var contextRes= await RequestHandler(context.Request)
+           var contextRes= await RequestHandler(contextId, context.Request)
                 .Bind(inDate =>
                 {
                     //Публикуем полученные входные данные на шину.
@@ -146,7 +142,7 @@ namespace SibWay.HttpApi
         }
 
 
-        private async Task<Result<InputDataEventItem>> RequestHandler(HttpListenerRequest request)
+        private async Task<Result<InputDataEventItem>> RequestHandler(Guid contextId, HttpListenerRequest request)
         {
             _logger.Information("{HttpServer}", "Получили запрос");
             var tableNameRes = ParseUrl(request);
@@ -158,6 +154,7 @@ namespace SibWay.HttpApi
                 {
                     var inType = new InputDataEventItem
                     {
+                        Id = contextId,
                         TableName = tableNameRes.Value,
                         Datas = listItemSibWay
                     };
@@ -209,7 +206,6 @@ namespace SibWay.HttpApi
         {
             var indigoRespDto= responseRes.IsFailure ? new IndigoResponseDto(0, responseRes.Error) : new IndigoResponseDto(1,  "Ok"); 
             _logger.Information("{HttpServer} {@ResponseResult}", "Готовим ответ ...", indigoRespDto);
-
             try
             {
                 string responseString = indigoRespDto.ToString();
@@ -228,28 +224,6 @@ namespace SibWay.HttpApi
             }
             return Result.Success();
         }
-
-        
-        
-        // private  Task ListenHttpAsync(CancellationToken ct)
-        // {
-        //     _listener.Start();
-        //     _logger.Information("{HttpServer}", "Ожидание запросов ...");
-        //     
-        //     var listenTask= Task.Factory.StartNew(async () =>
-        //     {
-        //         while (!ct.IsCancellationRequested)
-        //         {
-        //             try
-        //             {
-        //                 await Task.Delay(1000, ct);
-        //                 _eventBus.Publish(new GetDataEventItem{TableName = $"TableName_{DateTime.Now:T}"});//DEBUG
-        //             }
-        //             catch (TaskCanceledException ex) { }
-        //         }
-        //         _eventBus.OnCompleted();
-        //     }, ct, TaskCreationOptions.LongRunning, TaskScheduler.Default);
-        //     return listenTask;
-        // }
+        #endregion
     }
 }

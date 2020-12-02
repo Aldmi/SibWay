@@ -57,10 +57,8 @@ namespace SibWay.Application
 
            //Отправить данные на табло и результат отпарвки опубликовать на шину данных
            var res= await table.SendData(data.Datas);
-           await Task.Delay(5000);//DEBUG
-           _eventBus.Publish(new SibWayResponseItem(table.SettingSibWay.Ip, res)); //TODO: TableName должен быть в настройках
-           
-           //Оценить Result залогировать ошибку 
+           await Task.Delay(500);//DEBUG
+           _eventBus.Publish(new SibWayResponseItem(data.Id, table.SettingSibWay.Ip, res)); //TODO: TableName должен быть в настройках
         }
 
         

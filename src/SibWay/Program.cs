@@ -39,8 +39,8 @@ namespace SibWay
             var httpServer= new HttpServer("http://localhost:44888/api/InputData/SendDataXmlMultipart4Devices/",eventBus, Log.Logger);
             StartHttpListenerCommand(httpServer);
             //DEBUG-------------------
-            // await Task.Delay(8000);
-            // StopHttpListenerCommand(httpServer);
+             //await Task.Delay(3000);
+             //StopHttpListenerCommand(httpServer);
             // await Task.Delay(8000);
             // StartHttpListenerCommand(httpServer);
             //DEBUG------------------
