@@ -39,8 +39,9 @@ namespace SibWay.SibWayApi
         private byte _countTryingTakeData;               //счетчик попыток
         
         #region prop
-        public DisplayDriver DisplayDriver { get; set; } = new DisplayDriver();
-        public SettingSibWay SettingSibWay { get; set; }
+        public DisplayDriver DisplayDriver { get;} = new DisplayDriver();
+        public SettingSibWay SettingSibWay { get; }
+        public string TableName => SettingSibWay.TableName; 
 
         public Dictionary<string, string> DictSendingStrings { get; } = new Dictionary<string, string>(); //Словарь отправленных строк на каждую колонку. Key= Название колонки.   Value= Строка
 
@@ -113,7 +114,7 @@ namespace SibWay.SibWayApi
                 try
                 {
                     DisplayDriver.Initialize(SettingSibWay.Ip, SettingSibWay.Port);
-                    StatusString = $"Conect to {SettingSibWay.Ip} : {SettingSibWay.Port} ...";
+                    StatusString = $"{TableName}  Conect to {SettingSibWay.Ip} : {SettingSibWay.Port} ...";
                     var errorCode = await OpenConnectionAsync();
                     IsConnect = (errorCode == ErrorCode.ERROR_SUCCESS);
                     //IsConnect = true;//DEBUG!!!!!!!!!!!!!!!
@@ -148,7 +149,7 @@ namespace SibWay.SibWayApi
         public async Task<Result> SendData(IList<ItemSibWay> sibWayItems)
         {
             if (!IsConnect)
-                return Result.Failure("Not connect ...");
+                return Result.Failure($"{TableName}.  Not connect ...");
             
             IsRunDataExchange = true;
             try
@@ -190,7 +191,7 @@ namespace SibWay.SibWayApi
                             {
                                 //Debug.WriteLine($"RECONNECT:  {DateTime.Now:mm:ss}");
                                 ReConnect();
-                                return Result.Failure("Ошибок слишком много, ушли на РЕКОННЕКТ");
+                                return Result.Failure($"{TableName}. Ошибок слишком много, ушли на РЕКОННЕКТ");
                             }
                         }
                         await Task.Delay(winSett.DelayBetweenSending);
@@ -456,14 +457,12 @@ namespace SibWay.SibWayApi
 
 
 
-        #region Disposable
-
+        #region DisposePattern
         public void Dispose()
         {
             DisplayDriver?.CloseConection();
             DisplayDriver?.Dispose();
         }
-
         #endregion
     }
 }

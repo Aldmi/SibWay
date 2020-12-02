@@ -10,6 +10,7 @@ namespace SibWay.SibWayApi
     /// </summary>
     public class WindowSett
     {
+       
         public readonly byte Number;  //Номер окна
         public readonly string ColumnName; //Название поля для вывода, т.е. имя переменной отображаемой в этом окне
         public readonly int FontSize;        //Размер шрифта 8/12/16/24/32 пикселя в высоту. DisplayTextHeight для каждого окна берется соответсвующий.
@@ -46,26 +47,22 @@ namespace SibWay.SibWayApi
         }
     }
 
-
-
-
+    
     public class SettingSibWay
     {
+        public readonly string TableName;
         public readonly Dictionary<int, string> Path2FontFileDictionary; //= Application.StartupPath + @"\LEDFont8px.xml";
         public readonly string Ip;
         public readonly ushort Port;
         public readonly int TimeRespown;
         public readonly int Time2Reconnect;
         public readonly int NumberTryingTakeData;
-
-
         public IEnumerable<WindowSett> WindowSett { get; set; }
 
-
-
-
-        public SettingSibWay(string ip, string port, Dictionary<int, string> path2FontFileDictionary, string timeRespown, string time2Reconnect, string numberTryingTakeData)
+        
+        public SettingSibWay(string tableName, string ip, string port, Dictionary<int, string> path2FontFileDictionary, string timeRespown, string time2Reconnect, string numberTryingTakeData)
         {
+            TableName = tableName;
             Ip = ip;
             Port = ushort.Parse(port);
             Path2FontFileDictionary = path2FontFileDictionary;

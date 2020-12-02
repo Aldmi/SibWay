@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using CSharpFunctionalExtensions;
 using Serilog;
 using SibWay.Application.EventHandlers;
 using SibWay.Infrastructure;
@@ -22,6 +23,7 @@ namespace SibWay.Application
         private readonly IDisposable _getDataEventItemRxLifeTime;
 
 
+        #region ctor
         public App(IReadOnlyList<SibWayProxy> sibWays, EventBus eventBus, ILogger logger)
         {
             _sibWays = sibWays ?? throw new ArgumentNullException(nameof(sibWays));
@@ -38,30 +40,44 @@ namespace SibWay.Application
                     _logger.Warning("Задача получения данных Была остановленна");
                 });
         }
-
+        #endregion
         
+
+        #region Methods
+        /// <summary>
+        /// Получение данных с EventBus.
+        /// И выбор табло для отправки.
+        /// </summary>
         private async void GetDataRxHandler(InputDataEventItem data)
         {
             _logger.Information("Полученны данные: {@App}", data);
-            await SendData(data);
+            //1. Выбрать нужное табло для отправки.
+            var table= _sibWays.FirstOrDefault(sw => sw.SettingSibWay.TableName == data.TableName);
+            if (table == null)
+            {
+                var error = $"Табло не найденно по имени: '{data.TableName}'";
+                _eventBus.Publish(new SibWayResponseItem(data.Id, "", Result.Failure(error)));
+            }
+            else
+            {
+                await SendData(table, data);
+            }
         }
 
 
         /// <summary>
-        /// Получает данные с шины, и вызывает этот метод.
+        /// Отправка данных на табло.
         /// </summary>
-        private async Task SendData(InputDataEventItem data)
+        private async Task SendData(SibWayProxy table, InputDataEventItem data)
         {
-            //1. Выбрать нужное табло для отправки
-           var table= _sibWays.FirstOrDefault();
-
-           //Отправить данные на табло и результат отпарвки опубликовать на шину данных
-           var res= await table.SendData(data.Datas);
-           await Task.Delay(500);//DEBUG
-           _eventBus.Publish(new SibWayResponseItem(data.Id, table.SettingSibWay.Ip, res)); //TODO: TableName должен быть в настройках
+            var res= await table.SendData(data.Datas);
+            //await Task.Delay(500);//DEBUG
+            _eventBus.Publish(new SibWayResponseItem(data.Id, table.SettingSibWay.TableName, res));
         }
+        #endregion
 
-        
+
+        #region DisposePattern
         public void Dispose()
         {
             _getDataEventItemRxLifeTime.Dispose();
@@ -70,5 +86,6 @@ namespace SibWay.Application
                 sibWay.Dispose();
             }
         }
+        #endregion
     }
 }

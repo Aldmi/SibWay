@@ -34,6 +34,7 @@ namespace SibWay.SibWayApi
 
             foreach (var el in devSibWay)
             {
+                var tableName= (string) el.Attribute("TableName");
                 var id= (string) el.Attribute("Id");
                 var ip= (string) el.Attribute("Ip");
                 var port= (string) el.Attribute("Port");
@@ -60,7 +61,7 @@ namespace SibWay.SibWayApi
                     Id= int.Parse(id),
                     Description= description,
                     Period= long.Parse(period),
-                    SettingSibWay= new SettingSibWay(ip, port, fontFileDictionary, timeRespone, timeDelayReconnect, numberTryingTakeData)
+                    SettingSibWay= new SettingSibWay(tableName, ip, port, fontFileDictionary, timeRespone, timeDelayReconnect, numberTryingTakeData)
                 };
 
                 // var bind= (string)el.Attribute("Binding");

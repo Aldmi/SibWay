@@ -15,17 +15,16 @@ namespace SibWay.Services
             _logger = logger;
         }
 
-
-        public async Task WhenAll()
+        
+        public void WaitAll()
         {
             try
             {
-                await Task.WhenAll(_process);
+                Task.WaitAll(_process);
             }
             catch (Exception e)
             {
                 _logger.Fatal($"Background Process Exception: {e}");
-                throw;
             }
             _logger.Information("All Background Process Completed");
         }

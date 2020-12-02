@@ -89,22 +89,22 @@ namespace SibWay.HttpApi
                             var res = t.Result;
                             if (res.IsSuccess)
                             {
-                                _logger.Information("{HttpServer} {responseResult}","ЗАПРОС ОБРАБОТАН");
+                                _logger.Information("{HttpServer}","ЗАПРОС ОБРАБОТАН УСПЕШНО");
                             }
                             else
                             {
-                                _logger.Error("{HttpServer} {responseResult}","ЗАПРОС ОБРАБОТАН С ОШИБКОЙ", res.Error);
+                                _logger.Error("{HttpServer} '{responseResult}'","ЗАПРОС ОБРАБОТАН С ОШИБКОЙ", res.Error);
                             }
                         }
                         else
                         { 
-                            _logger.Warning("{HttpServer}","Task ОБРАБОТКИ запроса завершилась Не удачей.");
+                            _logger.Error("{HttpServer}","Task ОБРАБОТКИ запроса завершилась Не удачей.");
                         }
                     }, ct);
                 }
                 catch (OperationCanceledException ex)
                 {
-                    _logger.Information("{HttpServer}","Конец ожидания запросов", ex.Message);
+                    _logger.Warning("{HttpServer}","Отмена ожидания запросов", ex.Message);
                 }
             }
         }
@@ -130,6 +130,14 @@ namespace SibWay.HttpApi
                 {
                     //Ждем ответа от SibWay об отправки входных данных. 
                     var sibWayResponse = await responseTask;
+                    if (sibWayResponse.Result.IsSuccess)
+                    {
+                        _logger.Information("{HttpServer} {ResponseResult}", "ОТВЕТ:", "OK");
+                    }
+                    else
+                    {
+                        _logger.Error("{HttpServer} {ResponseResult}", "ОТВЕТ:", sibWayResponse.Result.Error);
+                    }
                     return sibWayResponse.Result;
                 })
                 .Finally(async result =>
@@ -204,8 +212,7 @@ namespace SibWay.HttpApi
         
         private async Task<Result> ResponseHandler(HttpListenerResponse response, Result responseRes)
         {
-            var indigoRespDto= responseRes.IsFailure ? new IndigoResponseDto(0, responseRes.Error) : new IndigoResponseDto(1,  "Ok"); 
-            _logger.Information("{HttpServer} {@ResponseResult}", "Готовим ответ ...", indigoRespDto);
+            var indigoRespDto= responseRes.IsFailure ? new IndigoResponseDto(0, responseRes.Error) : new IndigoResponseDto(1,  "Ok");
             try
             {
                 string responseString = indigoRespDto.ToString();
