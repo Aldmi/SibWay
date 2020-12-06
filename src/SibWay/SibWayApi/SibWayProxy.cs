@@ -10,6 +10,8 @@ using CSharpFunctionalExtensions;
 using LedScreenLibNetWrapper;
 using LedScreenLibNetWrapper.Impl;
 using Serilog;
+using SibWay.Application.EventHandlers;
+using SibWay.Infrastructure;
 
 namespace SibWay.SibWayApi
 {
@@ -33,8 +35,9 @@ namespace SibWay.SibWayApi
     }
 
 
-    public class SibWayProxy : INotifyPropertyChanged, IDisposable
+    public class SibWayProxy : IDisposable
     {
+        private readonly EventBus _eventBus;
         private readonly ILogger _logger;
         private byte _countTryingTakeData;               //счетчик попыток
         
@@ -54,7 +57,6 @@ namespace SibWay.SibWayApi
             {
                 if (value == _statusString) return;
                 _statusString = value;
-                OnPropertyChanged();
             }
         }
 
@@ -67,7 +69,7 @@ namespace SibWay.SibWayApi
             {
                 if (value == _isConnect) return;
                 _isConnect = value;
-                OnPropertyChanged();
+                _eventBus.Publish(new ChangeConnectSibWayEvent(TableName, StatusString, _isConnect));
             }
         }
 
@@ -80,7 +82,6 @@ namespace SibWay.SibWayApi
             {
                 if (value == _isRunDataExchange) return;
                 _isRunDataExchange = value;
-                OnPropertyChanged();
             }
         }
         #endregion
@@ -88,8 +89,9 @@ namespace SibWay.SibWayApi
 
         
         #region ctor
-        public SibWayProxy(SettingSibWay settingSibWay, ILogger logger)
+        public SibWayProxy(SettingSibWay settingSibWay, EventBus eventBus, ILogger logger)
         {
+            _eventBus = eventBus;
             _logger = logger;
             SettingSibWay = settingSibWay;
         }
@@ -98,16 +100,15 @@ namespace SibWay.SibWayApi
 
         
         #region Method
-        public async Task ReConnect()
+        public Task<Result> ReConnect()
         {
             _countTryingTakeData = 0;
             IsConnect = false;
-            //OnPropertyChanged(nameof(IsConnect));
             Dispose();
-            await Connect();
+            return Connect();
         }
         
-        private async Task Connect()
+        private async Task<Result> Connect()
         {
             while (!IsConnect)
             {
@@ -117,12 +118,12 @@ namespace SibWay.SibWayApi
                     StatusString = $"{TableName}  Conect to {SettingSibWay.Ip} : {SettingSibWay.Port} ...";
                     var errorCode = await OpenConnectionAsync();
                     IsConnect = (errorCode == ErrorCode.ERROR_SUCCESS);
-                    //IsConnect = true;//DEBUG!!!!!!!!!!!!!!!
+                    IsConnect = true;//DEBUG!!!!!!!!!!!!!!!
                     if (!_isConnect)
                     {
                         _logger.Warning("{Connection2SibWay}   {errorCode}", StatusString, errorCode);
+                        await Task.Delay(SettingSibWay.Time2Reconnect);
                     }
-                    await Task.Delay(SettingSibWay.Time2Reconnect);
                 }
                 catch (Exception ex)
                 {
@@ -132,20 +133,33 @@ namespace SibWay.SibWayApi
                     Dispose();
                 }
             }
-            StatusString = $"Conect Sucsess: {SettingSibWay.Ip} : {SettingSibWay.Port} ...";
-            _logger.Information("{Connection2SibWay}", StatusString);
+            StatusString = $"{TableName} Conect to Sucsess !!!!: {SettingSibWay.Ip}:{SettingSibWay.Port} ...";
+            _logger.Information("'{Connection2SibWay}'", StatusString);
+            return Result.Success($" Task подключения к {TableName} Завершен.");
         }
         
         /// <summary>
         /// Не блокирующая операция открытия соедининия. 
         /// </summary>
-        public async Task<ErrorCode> OpenConnectionAsync()
+        private async Task<ErrorCode> OpenConnectionAsync()
         {
             return await Task<ErrorCode>.Factory.StartNew(() =>
             (ErrorCode)DisplayDriver.OpenConection());
         }
 
+        /// <summary>
+        /// Очистка табло.
+        /// </summary>
+        public  Task<Result> SendDataClear()
+        {
+            var clearData = new List<ItemSibWay>{new ItemSibWay()}; //TODO: элемент для очитки создать
+            return SendData(clearData);
+        }
+
         
+        /// <summary>
+        /// Отправка данных на табло.
+        /// </summary>
         public async Task<Result> SendData(IList<ItemSibWay> sibWayItems)
         {
             if (!IsConnect)
@@ -190,7 +204,7 @@ namespace SibWay.SibWayApi
                             if (++_countTryingTakeData > SettingSibWay.NumberTryingTakeData)
                             {
                                 //Debug.WriteLine($"RECONNECT:  {DateTime.Now:mm:ss}");
-                                ReConnect();
+                                IsConnect = false;
                                 return Result.Failure($"{TableName}. Ошибок слишком много, ушли на РЕКОННЕКТ");
                             }
                         }
@@ -398,9 +412,7 @@ namespace SibWay.SibWayApi
                 using (var tu = new TextUtility())
                 {
                     tu.Initialize(path2FontFile);
-
-                    var sizeStr=tu.MeasureString(str);//DEBUG
-
+                    //var sizeStr=tu.MeasureString(str);//DEBUG
                     while (tu.MeasureString(str) > width)
                     {
                         str = str.Remove(str.Length - 1);
@@ -438,25 +450,9 @@ namespace SibWay.SibWayApi
 
             return isSucsees;
         }
-
         #endregion
 
-
-
-
-        #region Events
-        public event PropertyChangedEventHandler PropertyChanged;
-        //[NotifyPropertyChangedInvocator]
-        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
-        {
-            var handler = PropertyChanged;
-            handler?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
-        #endregion
-
-
-
-
+        
         #region DisposePattern
         public void Dispose()
         {

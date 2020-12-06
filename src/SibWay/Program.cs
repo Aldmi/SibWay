@@ -33,7 +33,7 @@ namespace SibWay
                 Console.ReadKey();
                 return;
             }
-            var sibWayProxies= xmlSibWaySett.Select(xmlSett => new SibWayProxy(xmlSett.SettingSibWay, Log.Logger)).ToList();
+            var sibWayProxies= xmlSibWaySett.Select(xmlSett => new SibWayProxy(xmlSett.SettingSibWay, _eventBus, Log.Logger)).ToList();
              _app= new App(sibWayProxies, _eventBus, Log.Logger);
             
             //Создание httpServer.-------------------------------------------------------------------
@@ -48,9 +48,10 @@ namespace SibWay
             
             //Запуск фоновых задач.-------------------------------------------------------------------
             //1. Задачи коннекта всех табло SibWay.
-            var sibWayReconnectTasks = sibWayProxies.Select(sw => sw.ReConnect()).ToList();
+            _app.Init();
+            //var sibWayReconnectTasks = sibWayProxies.Select(sw => sw.ReConnect()).ToList();
             //2. Создание HttpListener и запуск BG обработки запросов.
-            var listenHttpTask= httpServer.StartListen().Value;
+            var listenHttpTask= httpServer.StartListen();
             
             //DEBUG-------------------
              //await Task.Delay(3000);
@@ -59,11 +60,11 @@ namespace SibWay
             // StartHttpListenerCommand(httpServer);
             //DEBUG------------------
             
-            var allTasks = new List<Task> {listenHttpTask};
-            allTasks.AddRange(sibWayReconnectTasks);
+            var allTasks = new List<Task<Result>> {listenHttpTask};
+            //allTasks.AddRange(sibWayReconnectTasks);
             var bg= new BackgroundProcessService(Log.Logger, allTasks.ToArray());
-            Log.Information("Allpication Loaded");
-            bg.WaitAll();
+            Log.Information("Allpication Loaded ...");
+            await bg.WaitAll();
             Log.Information("Allpication Stoped");
             Log.CloseAndFlush();
         }
@@ -74,7 +75,7 @@ namespace SibWay
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Debug()
                 .WriteTo.Console(restrictedToMinimumLevel: LogEventLevel.Information)
-                .WriteTo.File("logs\\myapp.txt", rollingInterval: RollingInterval.Day)
+                .WriteTo.File("logs\\SibWay.txt", rollingInterval: RollingInterval.Day)
                 .CreateLogger();
             _logger = Log.Logger;
             
@@ -82,30 +83,30 @@ namespace SibWay
         }
         
         
-        public static void StartHttpListenerCommand(HttpServer httpServer)
-        {
-            var (_, isFailure, httpListenTask, startHttpListenError) = httpServer.StartListen();
-            if (isFailure)
-            {
-                Log.Logger.Error("Ошибка запуска HttpListener '{HttpListener}'", startHttpListenError);
-            }
-            else
-            {
-                Log.Logger.Information("HttpListener '{HttpListener}'", "Успешно запущен");
-            }
-        }
-        
-        public static void StopHttpListenerCommand(HttpServer httpServer)
-        {
-            var (_, isFailure, error) = httpServer.StopListen();
-            if (isFailure)
-            {
-                Log.Logger.Error("Ошибка останова HttpListener '{HttpListener}'", error);
-            }
-            else
-            {
-                Log.Logger.Information("HttpListener '{HttpListener}'", "Успешно остановлен");
-            }
-        }
+        // public static void StartHttpListenerCommand(HttpServer httpServer)
+        // {
+        //     var (_, isFailure, httpListenTask, startHttpListenError) = httpServer.StartListen();
+        //     if (isFailure)
+        //     {
+        //         Log.Logger.Error("Ошибка запуска HttpListener '{HttpListener}'", startHttpListenError);
+        //     }
+        //     else
+        //     {
+        //         Log.Logger.Information("HttpListener '{HttpListener}'", "Успешно запущен");
+        //     }
+        // }
+        //
+        // public static void StopHttpListenerCommand(HttpServer httpServer)
+        // {
+        //     var (_, isFailure, error) = httpServer.StopListen();
+        //     if (isFailure)
+        //     {
+        //         Log.Logger.Error("Ошибка останова HttpListener '{HttpListener}'", error);
+        //     }
+        //     else
+        //     {
+        //         Log.Logger.Information("HttpListener '{HttpListener}'", "Успешно остановлен");
+        //     }
+        // }
     }
 }

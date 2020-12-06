@@ -21,8 +21,9 @@ namespace SibWay.Application
         private readonly EventBus _eventBus;
         private readonly ILogger _logger;
         private readonly IDisposable _getDataEventItemRxLifeTime;
+        private readonly IDisposable _changeConnectRxLifeTime;
 
-
+        
         #region ctor
         public App(IReadOnlyList<SibWayProxy> sibWays, EventBus eventBus, ILogger logger)
         {
@@ -33,17 +34,42 @@ namespace SibWay.Application
                 GetDataRxHandler,
                 ex =>
                 {
-                    _logger.Error($"Задача получения данных завершилась с ОШИБКОЙ {ex}");
+                    _logger.Error($"Обработка события получения данных завершилась с ОШИБКОЙ {ex}");
                 },
                 () =>
                 {
-                    _logger.Warning("Задача получения данных Была остановленна");
+                    _logger.Warning("Обработка события получения данных Была остановленна");
+                });
+            _changeConnectRxLifeTime = eventBus.Subscrube<ChangeConnectSibWayEvent>(
+                ChangeConnectRxHandler, 
+                ex =>
+                {
+                    _logger.Error($"Обработка события ChangeConnect завершилась с ОШИБКОЙ {ex}");
+                },
+                () =>
+                {
+                    _logger.Warning("Обработка события ChangeConnect Была остановленна");
                 });
         }
         #endregion
-        
 
-        #region Methods
+
+
+        #region RxEventHandlers
+        /// <summary>
+        /// Получение события изменения IsConnect с EventBus.
+        /// Если IsConnect == false, то выполним реконнект и отправк данных очистки
+        /// </summary>
+        private void ChangeConnectRxHandler(ChangeConnectSibWayEvent connChangeEvent)
+        {
+            if (!connChangeEvent.IsConnect)
+            {
+                var t= ReconnectAndCommandClear(GetByName(connChangeEvent.TableName));
+                //TODO: пометсить задачу в фоновую систему обработки задач для APP.
+            }
+        }
+
+        
         /// <summary>
         /// Получение данных с EventBus.
         /// И выбор табло для отправки.
@@ -63,6 +89,33 @@ namespace SibWay.Application
                 await SendData(table, data);
             }
         }
+        #endregion
+        
+        
+        #region Methods
+        
+        /// <summary>
+        /// Инициализация приложения.
+        /// Выполнение комманды ReconnectAndCommandClear для всех табло
+        /// </summary>
+        public Task Init()
+        {
+            var sibWayReconnectTaskList = _sibWays.Select(ReconnectAndCommandClear).ToList();
+            return Task.CompletedTask;
+            //TODO: пометсить задачу в фоновую систему обработки задач для APP и возвращать бесконечную Задачу обработки этих фоновых процессов
+        }
+        
+        
+        /// <summary>
+        /// последовательно выполнить ReConnect и затем SendDataClear для табло.
+        /// </summary>
+        private async Task<Result> ReconnectAndCommandClear(SibWayProxy sibWay)
+        {
+            var connectRes= await sibWay.ReConnect();
+            var clearRes= await sibWay.SendDataClear(); //Долгая задача
+            var res= Result.Combine(connectRes, clearRes);
+            return res;
+        }
 
 
         /// <summary>
@@ -74,6 +127,8 @@ namespace SibWay.Application
             //await Task.Delay(500);//DEBUG
             _eventBus.Publish(new SibWayResponseItem(data.Id, table.SettingSibWay.TableName, res));
         }
+        
+        private SibWayProxy GetByName(string tableName)=>  _sibWays.FirstOrDefault(sw => sw.SettingSibWay.TableName == tableName);
         #endregion
 
 
@@ -81,6 +136,7 @@ namespace SibWay.Application
         public void Dispose()
         {
             _getDataEventItemRxLifeTime.Dispose();
+            _changeConnectRxLifeTime.Dispose();
             foreach (var sibWay in _sibWays)
             {
                 sibWay.Dispose();

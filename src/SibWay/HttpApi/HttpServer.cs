@@ -49,11 +49,11 @@ namespace SibWay.HttpApi
 
 
         #region Methode
-        public Result<Task> StartListen()
+        public Task<Result> StartListen()
         {
             if(IsStart)
             {
-                return Result.Failure<Task>("Задача уже запущена и не была остановленна");
+                return Task.FromResult<Result>(Result.Failure<Task>("Задача уже запущена и не была остановленна"));
             }
             _cts =  new CancellationTokenSource();
             _listener.Start();
@@ -73,7 +73,7 @@ namespace SibWay.HttpApi
         }
 
         
-        private async Task ListenHttpAsync(CancellationToken ct)
+        private async Task<Result> ListenHttpAsync(CancellationToken ct)
         {
             _logger.Information("{HttpServer}", "Ожидание запросов ...");
             while (true)
@@ -107,6 +107,7 @@ namespace SibWay.HttpApi
                     _logger.Warning("{HttpServer}","Отмена ожидания запросов", ex.Message);
                 }
             }
+            return Result.Success("ListenHttpAsync ОСТАНОВЛЕН");
         }
 
 

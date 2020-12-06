@@ -31,7 +31,7 @@ namespace SibWay.Services
                     DaysFollowingAlias = ad.DaysOfGoingAlias,
                     DirectionStation = ad.DirectionStation,
                     IsActive = true,
-                    Command = "NOT USE"
+                    Command = "None"
                 }).ToList();
                 return res;
             }

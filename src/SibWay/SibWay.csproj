@@ -33,6 +33,10 @@
         <WarningLevel>4</WarningLevel>
     </PropertyGroup>
     <ItemGroup>
+        <Reference Include="CliFx, Version=1.5.0.0, Culture=neutral, PublicKeyToken=null">
+          <HintPath>..\packages\CliFx.1.5.0\lib\netstandard2.0\CliFx.dll</HintPath>
+          <Private>True</Private>
+        </Reference>
         <Reference Include="CSharpFunctionalExtensions, Version=2.13.0.0, Culture=neutral, PublicKeyToken=null">
           <HintPath>..\packages\CSharpFunctionalExtensions.2.13.0\lib\net461\CSharpFunctionalExtensions.dll</HintPath>
           <Private>True</Private>
@@ -269,6 +273,7 @@
         <Compile Include="Application\App.cs" />
         <Compile Include="Application\Dto\AdInputType4XmlDto.cs" />
         <Compile Include="Application\Dto\IndigoResponseDto.cs" />
+        <Compile Include="Application\EventHandlers\ChangeConnectSibWayEvent.cs" />
         <Compile Include="Application\EventHandlers\InputDataEventItem.cs" />
         <Compile Include="Application\EventHandlers\SibWayResponseItem.cs" />
         <Compile Include="HttpApi\HttpServer.cs" />
