@@ -165,6 +165,9 @@ namespace SibWay.SibWayApi
             if (!IsConnect)
                 return Result.Failure($"{TableName}.  Not connect ...");
             
+            if (IsRunDataExchange)
+                return Result.Failure($"{TableName}.  Предыдущий обмен не закончен, повторите попытку позже ...");
+            
             IsRunDataExchange = true;
             try
             {
