@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using CSharpFunctionalExtensions;
 using Serilog;
 using SibWay.Application.EventHandlers;
 using SibWay.Infrastructure;
+using SibWay.Services;
 using SibWay.SibWayApi;
 
 
@@ -18,6 +20,7 @@ namespace SibWay.Application
     public class App : IDisposable
     {
         private readonly IReadOnlyList<SibWayProxy> _sibWays;
+        private readonly BackgroundControlTasks _backgroundControlTasks; 
         private readonly EventBus _eventBus;
         private readonly ILogger _logger;
         private readonly IDisposable _getDataEventItemRxLifeTime;
@@ -30,6 +33,7 @@ namespace SibWay.Application
             _sibWays = sibWays ?? throw new ArgumentNullException(nameof(sibWays));
             _eventBus = eventBus;
             _logger = logger;
+            _backgroundControlTasks = new BackgroundControlTasks(_logger);
             _getDataEventItemRxLifeTime= eventBus.Subscrube<InputDataEventItem>(
                 GetDataRxHandler,
                 ex =>
@@ -62,11 +66,9 @@ namespace SibWay.Application
         /// </summary>
         private void ChangeConnectRxHandler(ChangeConnectSibWayEvent connChangeEvent)
         {
-            if (!connChangeEvent.IsConnect)
-            {
-                var t= ReconnectAndCommandClear(GetByName(connChangeEvent.TableName));
-                //TODO: пометсить задачу в фоновую систему обработки задач для APP.
-            }
+            if (connChangeEvent.IsConnect) return;
+            var t= ReconnectAndCommandClear(GetByName(connChangeEvent.TableName));
+            _backgroundControlTasks.AddTask(t);
         }
 
         
@@ -98,11 +100,12 @@ namespace SibWay.Application
         /// Инициализация приложения.
         /// Выполнение комманды ReconnectAndCommandClear для всех табло
         /// </summary>
-        public Task Init()
+        public Task<Result> Init(CancellationToken ct)
         {
             var sibWayReconnectTaskList = _sibWays.Select(ReconnectAndCommandClear).ToList();
-            return Task.CompletedTask;
-            //TODO: пометсить задачу в фоновую систему обработки задач для APP и возвращать бесконечную Задачу обработки этих фоновых процессов
+            _backgroundControlTasks.AddTask(sibWayReconnectTaskList);
+            var controlTask = _backgroundControlTasks.StartControll(ct);
+            return controlTask;
         }
         
         

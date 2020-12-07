@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using CSharpFunctionalExtensions;
 using Serilog;
@@ -17,6 +18,7 @@ namespace SibWay
 {
     internal static class Program
     {
+        private const string Version = "Ver1.0 07.12.2020 [Debug Input Data]";
         private static ILogger _logger;
         private static EventBus _eventBus;
         private static App _app;
@@ -48,22 +50,12 @@ namespace SibWay
             
             //Запуск фоновых задач.-------------------------------------------------------------------
             //1. Задачи коннекта всех табло SibWay.
-            _app.Init();
-            //var sibWayReconnectTasks = sibWayProxies.Select(sw => sw.ReConnect()).ToList();
+            var bgControllTasks= _app.Init(CancellationToken.None);
             //2. Создание HttpListener и запуск BG обработки запросов.
             var listenHttpTask= httpServer.StartListen();
-            
-            //DEBUG-------------------
-             //await Task.Delay(3000);
-             //StopHttpListenerCommand(httpServer);
-            // await Task.Delay(8000);
-            // StartHttpListenerCommand(httpServer);
-            //DEBUG------------------
-            
-            var allTasks = new List<Task<Result>> {listenHttpTask};
-            //allTasks.AddRange(sibWayReconnectTasks);
+            var allTasks = new List<Task<Result>> {listenHttpTask, bgControllTasks};
             var bg= new BackgroundProcessService(Log.Logger, allTasks.ToArray());
-            Log.Information("Allpication Loaded ...");
+            Log.Information($"Allpication Loaded  {Version}...");
             await bg.WaitAll();
             Log.Information("Allpication Stoped");
             Log.CloseAndFlush();

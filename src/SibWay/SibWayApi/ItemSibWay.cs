@@ -26,5 +26,30 @@ namespace SibWay.SibWayApi
         public DateTime? DelayTime { get; set; }
         public DateTime ExpectedTime { get; set; }
         public TimeSpan? StopTime { get; set; }
+
+
+        public static ItemSibWay CreateClearItem()
+        {
+            return new ItemSibWay
+            {
+                Command = "Clear",
+                IsActive = true,
+                Addition = String.Empty,
+                Event = String.Empty,
+                Note = String.Empty,
+                DirectionStation = String.Empty,
+                PathNumber = String.Empty,
+                StationArrival = String.Empty,
+                StationDeparture = String.Empty,
+                TypeTrain = String.Empty,
+                DaysFollowingAlias = String.Empty,
+                NumberOfTrain = String.Empty,
+                ExpectedTime = DateTime.MinValue,
+                DelayTime = DateTime.MinValue,
+                TimeArrival = DateTime.MinValue,
+                TimeDeparture = DateTime.MinValue,
+                StopTime = TimeSpan.Zero
+            };
+        }
     }
 }

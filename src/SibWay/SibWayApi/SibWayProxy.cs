@@ -121,7 +121,7 @@ namespace SibWay.SibWayApi
                     IsConnect = true;//DEBUG!!!!!!!!!!!!!!!
                     if (!_isConnect)
                     {
-                        _logger.Warning("{Connection2SibWay}   {errorCode}", StatusString, errorCode);
+                        _logger.Warning("{TableName}  {Connection2SibWay}  {errorCode}", TableName, StatusString, errorCode);
                         await Task.Delay(SettingSibWay.Time2Reconnect);
                     }
                 }
@@ -152,7 +152,7 @@ namespace SibWay.SibWayApi
         /// </summary>
         public  Task<Result> SendDataClear()
         {
-            var clearData = new List<ItemSibWay>{new ItemSibWay()}; //TODO: элемент для очитки создать
+            var clearData = new List<ItemSibWay>{ItemSibWay.CreateClearItem()}; 
             return SendData(clearData);
         }
 
@@ -217,7 +217,7 @@ namespace SibWay.SibWayApi
             }
             catch (Exception ex)
             {
-                return Result.Failure($"SendData НЕ известная ошибка '{ex.Message}'");
+                return Result.Failure($"{TableName}. SendData НЕ известная ошибка '{ex.Message}'");
             }
             finally
             {
@@ -376,7 +376,7 @@ namespace SibWay.SibWayApi
             {
                 RemoveColumnChange(winSett.ColumnName);
                 //Debug.WriteLine($"error = {err}");
-                _logger.Error("{SendMessage2SibWay}", $"SibWayProxy SendMessageAsync respown statys {err}");
+                _logger.Error("{SendMessage2SibWay}", $"{TableName}. SibWayProxy SendMessageAsync respown statys {err}");
             }
 
             StatusString = "Отправка на экран " + winSett.Number + "errorCode= " + err + "\n";

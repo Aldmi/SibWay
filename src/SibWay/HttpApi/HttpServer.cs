@@ -105,9 +105,9 @@ namespace SibWay.HttpApi
                 catch (OperationCanceledException ex)
                 {
                     _logger.Warning("{HttpServer}","Отмена ожидания запросов", ex.Message);
+                    return Result.Success("Отмена ожидания запросов");
                 }
             }
-            return Result.Success("ListenHttpAsync ОСТАНОВЛЕН");
         }
 
 
