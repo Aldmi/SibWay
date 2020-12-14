@@ -78,7 +78,7 @@ namespace SibWay.Application
         /// </summary>
         private async void GetDataRxHandler(InputDataEventItem data)
         {
-            _logger.Information("Полученны данные: {@App}", data);
+            _logger.Information("\nПолученны данные: {@App}\n", data);
             //1. Выбрать нужное табло для отправки.
             var table= _sibWays.FirstOrDefault(sw => sw.SettingSibWay.TableName == data.TableName);
             if (table == null)

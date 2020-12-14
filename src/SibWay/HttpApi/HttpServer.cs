@@ -56,7 +56,14 @@ namespace SibWay.HttpApi
                 return Task.FromResult<Result>(Result.Failure<Task>("Задача уже запущена и не была остановленна"));
             }
             _cts =  new CancellationTokenSource();
-            _listener.Start();
+            try
+            {
+                _listener.Start();
+            }
+            catch (Exception e)
+            {
+                return Task.FromResult(Result.Failure(e.Message));
+            }
             return ListenHttpAsync(_cts.Token);
         }
         
@@ -153,13 +160,14 @@ namespace SibWay.HttpApi
 
         private async Task<Result<InputDataEventItem>> RequestHandler(Guid contextId, HttpListenerRequest request)
         {
-            _logger.Information("{HttpServer}", "Получили запрос");
+            _logger.Information("{HttpServer}  {Methode}   {ContentType}", "Получили запрос", request.HttpMethod, request.ContentType );
             var tableNameRes = ParseUrl(request);
             var xmlStrRes= await ParsePostBody(request);
             var postDataRes= Result.Combine(tableNameRes, xmlStrRes)
                 .Bind(() => XmlHelpers.DeserializeFromXml(xmlStrRes.Value))
                 .Bind(deserializedXml => Mapper.MapAdInputType4XmlDtoContainer2ListItemSibWay(deserializedXml))
                 .Bind(listItemSibWay =>
+                
                 {
                     var inType = new InputDataEventItem
                     {

@@ -30,25 +30,26 @@ namespace SibWay.SibWayApi
 
         public static ItemSibWay CreateClearItem()
         {
+            const string defaultStr = " ";
             return new ItemSibWay
             {
                 Command = "Clear",
                 IsActive = true,
-                Addition = String.Empty,
-                Event = String.Empty,
-                Note = String.Empty,
-                DirectionStation = String.Empty,
-                PathNumber = String.Empty,
-                StationArrival = String.Empty,
-                StationDeparture = String.Empty,
-                TypeTrain = String.Empty,
-                DaysFollowingAlias = String.Empty,
-                NumberOfTrain = String.Empty,
+                Addition = defaultStr,
+                Event = defaultStr,
+                Note = defaultStr,
+                DirectionStation = defaultStr,
+                PathNumber = defaultStr,
+                StationArrival = defaultStr,
+                StationDeparture = defaultStr,
+                TypeTrain = defaultStr,
+                DaysFollowingAlias = defaultStr,
+                NumberOfTrain = defaultStr,
                 ExpectedTime = DateTime.MinValue,
-                DelayTime = DateTime.MinValue,
-                TimeArrival = DateTime.MinValue,
-                TimeDeparture = DateTime.MinValue,
-                StopTime = TimeSpan.Zero
+                DelayTime = null,
+                TimeArrival = null,
+                TimeDeparture = null,
+                StopTime = null
             };
         }
     }

@@ -30,7 +30,7 @@ namespace SibWay.Services
                 foreach (var task in _buffer.GetConsumingEnumerable())
                 {
                     var res = await task;
-                    var strResult = res.ToString();
+                    var strResult = res.IsSuccess ? "УСПЕШНО!!!" : $"ОШИБКА: '{res.Error}'";
                     _logger.Information("{BackgroundControlTasks}  Результат: '{res}'","Фоновая задача завершена", strResult);
                 }
                 _logger.Information("{BackgroundControlTasks}","Цикл ожидания задач завершен");

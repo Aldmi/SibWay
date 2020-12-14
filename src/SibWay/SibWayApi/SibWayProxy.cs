@@ -42,11 +42,16 @@ namespace SibWay.SibWayApi
         private byte _countTryingTakeData;               //счетчик попыток
         
         #region prop
-        public DisplayDriver DisplayDriver { get;} = new DisplayDriver();
+        private DisplayDriver DisplayDriver { get;} = new DisplayDriver();
         public SettingSibWay SettingSibWay { get; }
         public string TableName => SettingSibWay.TableName; 
 
-        public Dictionary<string, string> DictSendingStrings { get; } = new Dictionary<string, string>(); //Словарь отправленных строк на каждую колонку. Key= Название колонки.   Value= Строка
+        /// <summary>
+        /// Словарь отправленных строк на каждую колонку.
+        /// Key= Название колонки.
+        /// Value= Строка.
+        /// </summary>
+        public Dictionary<string, string> DictSendingStrings { get; } = new Dictionary<string, string>();
 
 
         private string _statusString;
@@ -118,7 +123,7 @@ namespace SibWay.SibWayApi
                     StatusString = $"{TableName}  Conect to {SettingSibWay.Ip} : {SettingSibWay.Port} ...";
                     var errorCode = await OpenConnectionAsync();
                     IsConnect = (errorCode == ErrorCode.ERROR_SUCCESS);
-                    IsConnect = true;//DEBUG!!!!!!!!!!!!!!!
+                    //IsConnect = true;//DEBUG!!!!!!!!!!!!!!!
                     if (!_isConnect)
                     {
                         _logger.Warning("{TableName}  {Connection2SibWay}  {errorCode}", TableName, StatusString, errorCode);
@@ -150,8 +155,9 @@ namespace SibWay.SibWayApi
         /// <summary>
         /// Очистка табло.
         /// </summary>
-        public  Task<Result> SendDataClear()
+        public Task<Result> SendDataClear()
         {
+            _logger.Information("{SendDataClear}", $"{TableName}. НАЧАЛО ОЧИСТКИ ..................");
             var clearData = new List<ItemSibWay>{ItemSibWay.CreateClearItem()}; 
             return SendData(clearData);
         }
@@ -166,12 +172,11 @@ namespace SibWay.SibWayApi
                 return Result.Failure($"{TableName}.  Not connect ...");
             
             if (IsRunDataExchange)
-                return Result.Failure($"{TableName}.  Предыдущий обмен не закончен, повторите попытку позже ...");
+                return Result.Failure($"{TableName}. Слишком часто)).  Предыдущий обмен не закончен, повторите попытку позже ...");
             
             IsRunDataExchange = true;
             try
             {
-                //Debug.WriteLine($"--------------------------- {DateTime.Now}");
                 //Отправка информации каждому окну---------------------------------------
                 foreach (var winSett in SettingSibWay.WindowSett)
                 {
@@ -206,7 +211,6 @@ namespace SibWay.SibWayApi
                         {
                             if (++_countTryingTakeData > SettingSibWay.NumberTryingTakeData)
                             {
-                                //Debug.WriteLine($"RECONNECT:  {DateTime.Now:mm:ss}");
                                 IsConnect = false;
                                 return Result.Failure($"{TableName}. Ошибок слишком много, ушли на РЕКОННЕКТ");
                             }
@@ -217,7 +221,7 @@ namespace SibWay.SibWayApi
             }
             catch (Exception ex)
             {
-                return Result.Failure($"{TableName}. SendData НЕ известная ошибка '{ex.Message}'");
+                return Result.Failure($"{TableName}. SendData ошибка: '{ex.Message}'");
             }
             finally
             {
@@ -375,7 +379,6 @@ namespace SibWay.SibWayApi
             if (!tryResult)
             {
                 RemoveColumnChange(winSett.ColumnName);
-                //Debug.WriteLine($"error = {err}");
                 _logger.Error("{SendMessage2SibWay}", $"{TableName}. SibWayProxy SendMessageAsync respown statys {err}");
             }
 
@@ -406,7 +409,6 @@ namespace SibWay.SibWayApi
         }
 
 
-
         private string TrimStrOnWindowWidth(string str, int width, string path2FontFile)
         { 
             if (File.Exists(path2FontFile))
@@ -435,15 +437,20 @@ namespace SibWay.SibWayApi
                 strBuilder.Append(l);
                 strBuilder.Append("\n");
             }
-
             return strBuilder.Remove(strBuilder.Length - 1, 1).ToString(); //удалить послдений символ \n
         }
 
 
-        public bool SyncTime(DateTime dateTime)
+        /// <summary>
+        /// Отправка синхр. времени.
+        /// </summary>
+        public async Task<Result> SyncTime(DateTime dateTime)
         {
             if (!IsConnect)
-                return false;
+                return Result.Failure($"{TableName}.  Not connect ...");
+            
+            if (IsRunDataExchange)
+                return Result.Failure($"{TableName}.  Предыдущий обмен не закончен, повторите попытку позже ...");
 
             var isSucsees = true;//DisplayDriver.SetTime(dateTime);
 
@@ -451,7 +458,7 @@ namespace SibWay.SibWayApi
            // Thread.Sleep(1000);
           //  var cr= DisplayDriver.GetTime();//DEBUG
 
-            return isSucsees;
+            return Result.Success();
         }
         #endregion
 

@@ -18,7 +18,7 @@ namespace SibWay
 {
     internal static class Program
     {
-        private const string Version = "Ver1.0 07.12.2020 [Debug Input Data]";
+        private const string Version = "Ver1.2 14.12.2020 [Fix bug in Clear Data]";
         private static ILogger _logger;
         private static EventBus _eventBus;
         private static App _app;

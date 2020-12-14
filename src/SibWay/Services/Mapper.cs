@@ -22,7 +22,7 @@ namespace SibWay.Services
                     StationDeparture = ad.StartStation,
                     StationArrival = ad.EndStation,
                     PathNumber = ad.TrackNumber,
-                    NumberOfTrain = ad.TrackNumber,
+                    NumberOfTrain = ad.TrainNumber,
                     TimeDeparture = DateTimeParser(ad.SndDateTime),
                     TimeArrival = DateTimeParser(ad.RecDateTime),
                     DelayTime = DateTimeParser(ad.RecDateTime),
