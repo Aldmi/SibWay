@@ -123,7 +123,9 @@ namespace SibWay.SibWayApi
                     StatusString = $"{TableName}  Conect to {SettingSibWay.Ip} : {SettingSibWay.Port} ...";
                     var errorCode = await OpenConnectionAsync();
                     IsConnect = (errorCode == ErrorCode.ERROR_SUCCESS);
+                    #if DEBUG
                     //IsConnect = true;//DEBUG!!!!!!!!!!!!!!!
+                    #endif
                     if (!_isConnect)
                     {
                         _logger.Warning("{TableName}  {Connection2SibWay}  {errorCode}", TableName, StatusString, errorCode);
@@ -169,11 +171,16 @@ namespace SibWay.SibWayApi
         public async Task<Result> SendData(IList<ItemSibWay> sibWayItems)
         {
             if (!IsConnect)
-                return Result.Failure($"{TableName}.  Not connect ...");
-            
+            {
+                StatusString = $"{TableName}.  Not connect ..."; //TODO: Внести пеерменную  Status в которой хранить enum стаутса и строковый вид, иначе не понятен результирующее занчение статуса (все норм или ошибки.)
+                return Result.Failure(StatusString);
+            }
             if (IsRunDataExchange)
-                return Result.Failure($"{TableName}. Слишком часто)).  Предыдущий обмен не закончен, повторите попытку позже ...");
-            
+            {
+                StatusString = $"{TableName}. Слишком часто)).  Предыдущий обмен не закончен, повторите попытку позже ...";
+                return Result.Failure(StatusString);
+            }
+
             IsRunDataExchange = true;
             try
             {
@@ -301,18 +308,23 @@ namespace SibWay.SibWayApi
                             listString.Add(string.IsNullOrEmpty(trimStr) ? " " : trimStr);
                         }
                         continue;
-                        
-
+                    
                     case nameof(sh.TimeDeparture):
-                        trimStr = TrimStrOnWindowWidth(sh.TimeDeparture?.ToString("HH:mm") ?? " ", winSett.Width, path2FontFile);
+                        var timeDeparture = sh.TimeDeparture?.ToString("HH:mm") ?? " ";
+                        timeDeparture = timeDeparture == "00:00" ? " " : timeDeparture;
+                        trimStr = TrimStrOnWindowWidth(timeDeparture, winSett.Width, path2FontFile);
                         break;
 
                     case nameof(sh.TimeArrival):
-                        trimStr = TrimStrOnWindowWidth(sh.TimeArrival?.ToString("HH:mm") ?? " ", winSett.Width, path2FontFile);
+                        var timeArrival = sh.TimeArrival?.ToString("HH:mm") ?? " ";
+                        timeArrival = timeArrival == "00:00" ? " " : timeArrival;
+                        trimStr = TrimStrOnWindowWidth(timeArrival, winSett.Width, path2FontFile);
                         break;
 
                     case nameof(sh.DelayTime):
-                        trimStr = TrimStrOnWindowWidth(sh.DelayTime?.ToString("HH:mm") ?? " ", winSett.Width, path2FontFile);
+                        var delayTime = sh.DelayTime?.ToString("HH:mm") ?? " ";
+                        delayTime = delayTime == "00:00" ? " " : delayTime;
+                        trimStr = TrimStrOnWindowWidth(delayTime, winSett.Width, path2FontFile);
                         break;
 
                     case nameof(sh.ExpectedTime):
@@ -460,15 +472,15 @@ namespace SibWay.SibWayApi
 
             return Result.Success();
         }
-        #endregion
+#endregion
 
         
-        #region DisposePattern
+#region DisposePattern
         public void Dispose()
         {
             DisplayDriver?.CloseConection();
             DisplayDriver?.Dispose();
         }
-        #endregion
+#endregion
     }
 }

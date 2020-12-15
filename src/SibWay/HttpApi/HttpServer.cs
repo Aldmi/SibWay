@@ -89,25 +89,25 @@ namespace SibWay.HttpApi
                 {
                     var context = await _listener.GetContextAsync();
                     var handler = HttpListenerContextHandlerAsync(context, ct);
-                    handler.ContinueWith(t =>
-                    {
-                        if (t.IsCompleted)
-                        {
-                            var res = t.Result;
-                            if (res.IsSuccess)
-                            {
-                                _logger.Information("{HttpServer}","ЗАПРОС ОБРАБОТАН УСПЕШНО");
-                            }
-                            else
-                            {
-                                _logger.Error("{HttpServer} '{responseResult}'","ЗАПРОС ОБРАБОТАН С ОШИБКОЙ", res.Error);
-                            }
-                        }
-                        else
-                        { 
-                            _logger.Error("{HttpServer}","Task ОБРАБОТКИ запроса завершилась Не удачей.");
-                        }
-                    }, ct);
+                    _ = handler.ContinueWith(t =>
+                      {
+                          if (t.IsCompleted)
+                          {
+                              var res = t.Result;
+                              if (res.IsSuccess)
+                              {
+                                  _logger.Information("{HttpServer}", "ЗАПРОС ОБРАБОТАН УСПЕШНО");
+                              }
+                              else
+                              {
+                                  _logger.Error("{HttpServer} '{responseResult}'", "ЗАПРОС ОБРАБОТАН С ОШИБКОЙ", res.Error);
+                              }
+                          }
+                          else
+                          {
+                              _logger.Error("{HttpServer}", "Task ОБРАБОТКИ запроса завершилась Не удачей.");
+                          }
+                      }, ct);
                 }
                 catch (OperationCanceledException ex)
                 {

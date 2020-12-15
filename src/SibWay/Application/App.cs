@@ -88,7 +88,7 @@ namespace SibWay.Application
             }
             else
             {
-                await SendData(table, data);
+                await SendDataAndGetResponseImmediatly(table, data);
             }
         }
         #endregion
@@ -123,14 +123,27 @@ namespace SibWay.Application
 
         /// <summary>
         /// Отправка данных на табло.
+        /// И в качестве ответа сразу передаем текущий статус табло, без ожидания реального статуса овтета.
         /// </summary>
-        private async Task SendData(SibWayProxy table, InputDataEventItem data)
+        private async Task SendDataAndGetResponseImmediatly(SibWayProxy table, InputDataEventItem data)
         {
-            var res= await table.SendData(data.Datas);
+            var currentStatusRes = table.IsConnect ? Result.Success() : Result.Failure($"{table.TableName}.  '{table.StatusString}'");
+            _eventBus.Publish(new SibWayResponseItem(data.Id, table.SettingSibWay.TableName, currentStatusRes));
+            await table.SendData(data.Datas);
+        }
+
+
+        /// <summary>
+        /// Отправка данных на табло.
+        /// Ожидаем ответи только после получения публикуем его на ШИНУ.
+        /// </summary>
+        private async Task SendDataAndWaitResponse(SibWayProxy table, InputDataEventItem data)
+        {
+            var res = await table.SendData(data.Datas);
             //await Task.Delay(500);//DEBUG
             _eventBus.Publish(new SibWayResponseItem(data.Id, table.SettingSibWay.TableName, res));
         }
-        
+
         private SibWayProxy GetByName(string tableName)=>  _sibWays.FirstOrDefault(sw => sw.SettingSibWay.TableName == tableName);
         #endregion
 

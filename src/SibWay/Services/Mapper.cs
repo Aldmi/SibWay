@@ -25,7 +25,7 @@ namespace SibWay.Services
                     NumberOfTrain = ad.TrainNumber,
                     TimeDeparture = DateTimeParser(ad.SndDateTime),
                     TimeArrival = DateTimeParser(ad.RecDateTime),
-                    DelayTime = DateTimeParser(ad.RecDateTime),
+                    DelayTime = DateTimeParser(ad.LateTime),
                     StopTime = TimeSpanParser(ad.HereDateTime),
                     ExpectedTime = DateTimeParser(ad.ExpectedDateTime),
                     DaysFollowingAlias = ad.DaysOfGoingAlias,

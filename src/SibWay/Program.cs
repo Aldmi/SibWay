@@ -18,7 +18,7 @@ namespace SibWay
 {
     internal static class Program
     {
-        private const string Version = "Ver1.2 14.12.2020 [Fix bug in Clear Data]";
+        private const string Version = "Ver1.5 14.12.2020 [Change Logger settings]";
         private static ILogger _logger;
         private static EventBus _eventBus;
         private static App _app;
@@ -67,7 +67,20 @@ namespace SibWay
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Debug()
                 .WriteTo.Console(restrictedToMinimumLevel: LogEventLevel.Information)
-                .WriteTo.File("logs\\SibWay.txt", rollingInterval: RollingInterval.Day)
+                .WriteTo.File(
+                    "logs\\SibWay.txt", // 10 файлов хранится лог (100МБ лимит размера файла)
+                    LogEventLevel.Debug,
+                    rollingInterval: RollingInterval.Day,
+                    retainedFileCountLimit: 10,
+                    fileSizeLimitBytes: 100000000,
+                    rollOnFileSizeLimit: true)
+                .WriteTo.File(
+                    "logs/SibWayError.txt", //за 20 последних дней хранится Error лог (100МБ лимит размера файла)
+                    LogEventLevel.Error,
+                    rollingInterval: RollingInterval.Day,
+                    retainedFileCountLimit: 20,
+                    fileSizeLimitBytes: 100000000,
+                    rollOnFileSizeLimit: true)
                 .CreateLogger();
             _logger = Log.Logger;
             
